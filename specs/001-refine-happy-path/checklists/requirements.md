@@ -32,6 +32,6 @@
 ## Notes
 
 - Itens marcados completos após 1 iteração de validação (2026-10-10).
-- **Nota sobre "No implementation details":** nomes de tecnologia (Claude Code CLI, API do Notion, MCPs da Z.ai) aparecem somente como **restrições e decisões já ratificadas** (ADRs 001–006 aceitos; Constitution princípios I, III, VIII), não como escolhas de implementação desta feature. Os critérios de sucesso (SC-001 a SC-005) são agnósticos de tecnologia.
+- **Nota sobre "No implementation details":** nomes de tecnologia (Claude Code CLI, API do Notion, MCPs da Z.ai) aparecem somente como **restrições e decisões já ratificadas** (ADRs 001–005 aceitos; ADR-006 Proposto — premissa factual confirmada na research da feature (R1), com promoção a Aceito como tarefa da feature; Constitution princípios I, III, VIII), não como escolhas de implementação desta feature. Os critérios de sucesso (SC-001 a SC-005) são agnósticos de tecnologia.
 - **Pendência externa ao spec:** o intervalo de 5 minutos (FR-001) diverge do ADR-001 (15 min). Conforme a Governance da constitution, o ADR-001 é imutável — registrar ADR-007 substituindo o intervalo antes ou junto do `/speckit-plan`.
 - Decisões da usuária incorporadas: intervalo de 5 minutos; spec em português; escopo = fatia vertical To Refine (Opção A).
