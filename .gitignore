@@ -1,0 +1,19 @@
+# Environment / secrets
+.env
+.env.*
+
+# Logs
+logs/
+*.log
+
+# Python
+__pycache__/
+.venv/
+venv/
+*.pyc
+
+# Node
+node_modules/
+
+# macOS
+.DS_Store
