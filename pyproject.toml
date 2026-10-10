@@ -1,0 +1,51 @@
+[project]
+name = "notion-copilot"
+version = "0.1.0"
+description = "Orquestrador determinístico que opera um board de tarefas no Notion com agente de linguagem"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "typer>=0.12",
+    "pydantic>=2.7",
+    "pydantic-settings>=2.3",
+    "notion-client>=2.2",
+    "platformdirs>=4.2",
+]
+
+[project.scripts]
+notion-copilot = "notion_copilot.cli:app"
+
+[dependency-groups]
+dev = [
+    "pytest>=8.2",
+    "ruff>=0.6",
+    "mypy>=1.10",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/notion_copilot"]
+
+[tool.ruff]
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B"]
+
+[tool.mypy]
+python_version = "3.12"
+mypy_path = "src"
+explicit_package_bases = true
+warn_unused_ignores = true
+
+[[tool.mypy.overrides]]
+module = ["notion_copilot.domain.*", "notion_copilot.application.*"]
+strict = true
+
+[[tool.mypy.overrides]]
+module = "notion_client.*"
+ignore_missing_imports = true

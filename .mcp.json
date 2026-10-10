@@ -1,0 +1,23 @@
+# Servidores MCP da Z.ai (ADR-005). Somente busca e leitura web — nenhuma
+# ferramenta de Notion (constituição III, FR-008).
+# A credencial é expandida pelo Claude Code a partir do ambiente do subprocesso
+# (${VAR} com chaves); a chave vive somente no .env (RNF-S6). Se a variável não
+# estiver definida, o valor chega literal ao servidor — o pré-flight verifica.
+{
+  "mcpServers": {
+    "web_search_prime": {
+      "type": "http",
+      "url": "https://api.z.ai/api/mcp/web_search_prime/mcp",
+      "headers": {
+        "Authorization": "Bearer ${ANTHROPIC_AUTH_TOKEN}"
+      }
+    },
+    "web_reader": {
+      "type": "http",
+      "url": "https://api.z.ai/api/mcp/web_reader/mcp",
+      "headers": {
+        "Authorization": "Bearer ${ANTHROPIC_AUTH_TOKEN}"
+      }
+    }
+  }
+}

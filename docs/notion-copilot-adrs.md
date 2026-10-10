@@ -4,18 +4,19 @@
 
 | # | Decisão | Status |
 |---|---|---|
-| ADR-001 | Gatilho: cron/launchd com processo de vida curta | ✅ Aceito |
+| ADR-001 | Gatilho: cron/launchd com processo de vida curta | ✅ Aceito (intervalo e seleção: ver ADR-007) |
 | ADR-002 | Acesso ao Notion: API para mecânica, MCP para execução aberta | ✅ Aceito |
 | ADR-003 | Fila: a coluna "To Refine" é a fila, sem broker | ✅ Aceito |
 | ADR-004 | Agent runtime: Claude Code CLI, sem loop próprio | ✅ Aceito |
 | ADR-005 | Busca na web: MCP servers da Z.ai | ✅ Aceito |
-| ADR-006 | Escrita do resultado: API no Refine/Plan, MCP no Execute | ⬜ Proposto |
+| ADR-006 | Escrita do resultado: API no Refine/Plan, MCP no Execute | ✅ Aceito |
+| ADR-007 | Intervalo do scheduler: 5 minutos; seleção somente IA status vazio | ✅ Aceito |
 
 ---
 
 ## ADR-001 — Gatilho: cron/launchd com processo de vida curta
 
-**Status:** Aceito (2026-10-04)
+**Status:** Aceito (2026-10-04) — intervalo e regra de seleção substituídos pelo ADR-007 (2026-10-10)
 
 **Contexto**
 
@@ -151,7 +152,9 @@ Citação de fontes é contrato de saída da fase (prompt versionado): todo fato
 
 ## ADR-006 — Escrita do resultado: API no Refine/Plan, MCP no Execute
 
-**Status:** Proposto (aguardando confirmação)
+**Status:** Aceito (2026-10-10)
+
+**Evidência (2026-10-10):** a premissa "a API do Notion aceita markdown, sem conversão para blocos" foi confirmada na documentação oficial da versão `2026-03-11`: endpoints `GET`/`PATCH /v1/pages/{page_id}/markdown`, com o comando `update_content` recomendado para edição (`insert_content` é legacy) — research R1 da feature `001-refine-happy-path`.
 
 **Contexto**
 
@@ -175,3 +178,32 @@ A API do Notion aceita markdown, então as seções são anexadas sem conversão
 
 - Positivas: formato uniforme e auditável das seções; invariante "agente não escreve no card" válida em todas as fases exceto Execute.
 - Negativas: nenhuma identificada até agora.
+
+---
+
+## ADR-007 — Intervalo do scheduler: 5 minutos; seleção somente IA status vazio
+
+**Status:** Aceito (2026-10-10)
+
+**Contexto**
+
+O ADR-001 fixou o intervalo do gatilho em 15 minutos, com base na duração estimada de uma rodada, e definiu que a rodada seguinte seleciona cards com IA status "vazio, ❓ ou ⚠️". Duas mudanças vieram com a feature `001-refine-happy-path` (2026-10-10):
+
+1. A usuária decidiu reduzir o intervalo para 5 minutos, para atender o critério SC-001 (card em Refined em até 15 minutos em 95% dos casos).
+2. A especificação (FR-004) é mais estrita que o ADR-001 na seleção: somente cards em To Refine com IA status **vazio**. Cards em ❓ ou ⚠️ reentram na fila somente por ação manual da usuária (devolver a To Refine e limpar o status) — nunca por seleção automática.
+
+O ADR-001 é imutável; este ADR o substitui nesses dois pontos. O restante do ADR-001 (cron/launchd, processo de vida curta, sem daemon) permanece válido.
+
+**Decisão**
+
+launchd (macOS, `StartInterval: 300`) ou cron (Linux, `*/5 * * * *`) executa `uv run notion-copilot run` a cada 5 minutos (FR-001). A seleção considera somente cards em To Refine com IA status vazio (FR-004).
+
+A segurança do intervalo menor vem de duas proteções que o ADR-001 não tinha:
+
+- **Lock local por rodada** (FR-003, research R3): enquanto uma rodada executa, a seguinte termina imediatamente sem processar nada — rodadas sobrepostas deixam de ser problema.
+- **IA status ⏳** (FR-005): a seleção nunca pega um card em processamento; mesmo sem lock, dois processos não processariam o mesmo card.
+
+**Consequências**
+
+- Positivas: a espera máxima entre mover o card e a rodada cai de até 15 para até 5 minutos; filas cheias esvaziam mais rápido (até 5 cards por rodada, ~4 rodadas/hora).
+- Negativas: 3 rodadas a mais por hora que acordam com fila vazia (custo: 1 consulta de API cada, desprezável — research R7); rodadas sobrepostas passam a ser o caso comum, cobertas pelo lock.
