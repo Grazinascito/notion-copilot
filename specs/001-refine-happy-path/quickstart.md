@@ -28,7 +28,7 @@ uv run notion-copilot verify   # pré-flight: tudo ✔ antes de prosseguir (FR-0
 ### 2. Registro original preservado (US-2)
 
 - Comparar o bloco 📝 com o texto digitado na captura: **idênticos**.
-- Reexecutar o processamento (ex.: limpar status e devolver a To Refine): nenhuma seção é reescrita e não surge segundo bloco 📝; o heading 🔍 continua o do template (FR-015, SC-002, R9).
+- Reexecutar o processamento (ex.: limpar status e devolver a To Refine): nenhuma seção é reescrita e não surge segundo bloco 📝; o heading 🔍 continua o do template; o card termina em **Refined** com IA status vazio — desfecho `skipped_already_refined` (FR-015, SC-002, R9).
 
 ### 3. Falha visível e rodada que continua (US-3)
 
@@ -48,7 +48,7 @@ uv run notion-copilot verify   # pré-flight: tudo ✔ antes de prosseguir (FR-0
 
 ### 6. Timeout e abandono
 
-- Agente exceder 10 min → interrompido, card ⚠️, nada gravado sem validação (edge case).
+- Agente exceder 10 min → interrompido, card ⚠️ **sem retry** (decisão 2026-10-10 — research R8), nada gravado sem validação (edge case).
 - Card em ⏳ há > 30 min (simular `IA atualizado em`) → marcado ⚠️ na rodada seguinte (FR-017).
 
 ## Testes automatizados

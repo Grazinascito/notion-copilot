@@ -33,7 +33,7 @@ Validação de seleção (FR-004/FR-005): `pipeline == TO_REFINE` **e** `ia_stat
 | `selected` | list[Card] | ≤ 5, mais antigos primeiro (FR-004) |
 | `results` | list[CardResult] | Uma das terminações por card (FR-018) |
 
-Invariante (FR-018): ao fim da rodada, nenhum card selecionado fica em ⏳ — cada card termina em um dos desfechos de `CardResult` acima (`success`, `needs_you`, `error`, `skipped_moved`, `skipped_already_refined`; os desfechos `skipped_*` também limpam o ⏳), exceto rodada interrompida, coberta por FR-017.
+Invariante (FR-018): ao fim da rodada, nenhum card selecionado fica em ⏳ — cada card termina em um dos desfechos de `CardResult` acima (`success`, `needs_you`, `error`, `skipped_moved`, `skipped_already_refined`; os desfechos `skipped_*` também limpam o ⏳), exceto rodada interrompida, coberta por FR-017. Estado terminal dos desfechos `skipped_*`: `skipped_moved` — o card fica na raia para onde a usuária o moveu, com IA status vazio e nenhuma escrita (R10); `skipped_already_refined` — o card é movido para Refined com IA status vazio, sem reescrever nenhuma seção (FR-015, R9).
 
 ### CardResult
 

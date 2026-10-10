@@ -14,7 +14,7 @@ Abordagem técnica: processo Python de vida curta (`uv run notion-copilot run`) 
 
 **Language/Version**: Python 3.12+ (pinado em `.python-version`, instalado pelo `uv`)
 
-**Primary Dependencies**: `typer` (CLI), `pydantic` + `pydantic-settings` (`.env` e saída do agente), `notion-client` (API do Notion), `platformdirs` (diretório de estado: lock e logs — research R3). Externos ao processo: Claude Code CLI (executável, subprocesso), MCPs da Z.ai (`web_search_prime`, `web_reader`)
+**Primary Dependencies**: `typer` (CLI), `pydantic` + `pydantic-settings` (`.env` e saída do agente), `notion-client` (API do Notion), `platformdirs` (diretório de estado: lock e logs — research R3), `httpx` (**condicional** — entra somente se `notion-client` não expuser o endpoint markdown; verificação de implementação, research R2). Externos ao processo: Claude Code CLI (executável, subprocesso), MCPs da Z.ai (`web_search_prime`, `web_reader`)
 
 **Storage**: Notion board (estado de verdade: Pipeline, IA status, IA atualizado em) + logs locais (eventos JSON + rastro `stream-json` do agente). Sem banco de dados próprio.
 
