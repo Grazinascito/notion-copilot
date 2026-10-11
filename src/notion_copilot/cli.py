@@ -34,8 +34,6 @@ MANUAL_REMINDERS = [
     "Capabilities da integração: habilite Read content, Update content e "
     "Insert comments em notion.so/my-integrations (research R1/R6) — sem elas, "
     "a API retorna 403.",
-    "Template de página do banco: o esqueleto '## 🔍 Refinamento' com os 7 "
-    "headings vazios vem do template do banco (research R1); verifique-o no board.",
 ]
 
 
@@ -77,6 +75,8 @@ def _preflight(settings: Settings, notion: NotionApi) -> list[str]:
         _env_problems(settings)
         + _file_problems(settings)
         + notion.check_problems()
+        # sem template, todo card falharia na escrita com erro permanente (R1)
+        + notion.template_skeleton_problems()
         + claude_check()
     )
 
@@ -134,6 +134,7 @@ def verify() -> None:
         ("arquivo .env e campos obrigatórios", _env_problems(settings)),
         ("arquivos prompts/refine.md e .mcp.json", _file_problems(settings)),
         ("token do Notion e banco do inbox", notion.check_problems()),
+        ("template de página com o esqueleto 🔍", notion.template_skeleton_problems()),
         ("executável do agente (claude)", claude_check()),
     ]
     for label, problems in checks:

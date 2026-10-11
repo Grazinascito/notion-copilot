@@ -56,6 +56,21 @@ RECORDED_DATABASE = {
 }
 
 
+SKELETON_MARKDOWN = "\n".join(
+    [
+        "## 📝 Captura",  # conteúdo qualquer antes
+        "## 🔍 Refinamento",
+        "### Contexto",
+        "### Links guardados",
+        "### Ações sugeridas",
+        "### O que já adiantei",
+        "### Perguntas abertas",
+        "### Prompt sugerido",
+        "### Executor sugerido",
+    ]
+)
+
+
 class FakeEndpoint:
     def __init__(self, calls: list, name: str, response) -> None:
         self._calls = calls
@@ -80,21 +95,27 @@ class FakeNotionClient:
         me_response=None,
         database_response=None,
         query_response=None,
-        markdown="# página",
+        markdown=SKELETON_MARKDOWN,
+        templates=None,
     ) -> None:
         self.calls: list = []
         users = _NS()
         users.me = FakeEndpoint(
             self.calls, "users.me", me_response or {"object": "user", "name": "copilot"}
         )
-        databases = _NS()
-        databases.retrieve = FakeEndpoint(
-            self.calls, "databases.retrieve", database_response or RECORDED_DATABASE
+        data_sources = _NS()
+        data_sources.retrieve = FakeEndpoint(
+            self.calls, "data_sources.retrieve", database_response or RECORDED_DATABASE
         )
-        databases.query = FakeEndpoint(
+        data_sources.query = FakeEndpoint(
             self.calls,
-            "databases.query",
+            "data_sources.query",
             query_response if query_response is not None else {"results": [RECORDED_PAGE]},
+        )
+        data_sources.list_templates = FakeEndpoint(
+            self.calls,
+            "data_sources.list_templates",
+            {"results": templates if templates is not None else [{"id": "tpl-1", "name": "Refine"}]},
         )
         pages = _NS()
         pages.retrieve = FakeEndpoint(self.calls, "pages.retrieve", RECORDED_PAGE)
@@ -108,12 +129,12 @@ class FakeNotionClient:
         comments = _NS()
         comments.create = FakeEndpoint(self.calls, "comments.create", {"object": "comment"})
         self.users = users
-        self.databases = databases
+        self.data_sources = data_sources
         self.pages = pages
         self.comments = comments
 
 
-def make_api(client=None, markdown: str = "# página") -> NotionApi:
+def make_api(client=None, markdown: str = SKELETON_MARKDOWN) -> NotionApi:
     return NotionApi(
         auth_token="secret-x",
         database_id="db-1",
@@ -126,7 +147,7 @@ def test_queries_eligible_cards_with_the_server_side_filter_and_translates_them(
 
     cards = api.query_eligible(5)
 
-    (name, kwargs), *_ = [c for c in api._client.calls if c[0] == "databases.query"]
+    (name, kwargs), *_ = [c for c in api._client.calls if c[0] == "data_sources.query"]
     assert kwargs["filter"] == {
         "and": [
             {"property": "Pipeline", "select": {"equals": "To Refine"}},
@@ -147,11 +168,11 @@ def test_queries_eligible_cards_with_the_server_side_filter_and_translates_them(
 
 
 def test_reads_the_page_markdown_through_the_markdown_endpoint():
-    api = make_api(markdown="## 🔍 Refinamento — 10/10/2026\n\n### Contexto\n")
+    api = make_api()
 
     markdown = api.get_page_markdown(PAGE_ID)
 
-    assert markdown.startswith("## 🔍 Refinamento")
+    assert "## 🔍 Refinamento" in markdown
     calls = [c for c in api._client.calls if c[0] == "pages.retrieve_markdown"]
     assert calls[0][1] == {"page_id": PAGE_ID}
 
@@ -220,3 +241,25 @@ def test_check_problems_passes_on_a_valid_database():
     api = make_api()
 
     assert api.check_problems() == []
+
+
+def test_template_skeleton_problems_reports_a_missing_template():
+    api = make_api(FakeNotionClient(templates=[]))
+
+    problems = api.template_skeleton_problems()
+
+    assert any("não tem template" in problem for problem in problems)
+
+
+def test_template_skeleton_problems_reports_missing_headings():
+    api = make_api(markdown="## 🔍 Refinamento\n\n### Contexto\n")
+
+    problems = api.template_skeleton_problems()
+
+    assert any("### Links guardados" in problem for problem in problems)
+
+
+def test_template_skeleton_problems_passes_on_a_complete_skeleton():
+    api = make_api()
+
+    assert api.template_skeleton_problems() == []

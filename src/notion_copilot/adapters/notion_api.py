@@ -60,8 +60,8 @@ class NotionApi:
 
     def query_eligible(self, limit: int) -> list[Card]:
         """FR-004/R7: filtro server-side — fila vazia custa 1 consulta."""
-        response = self._client.databases.query(
-            database_id=self._database_id,
+        response = self._client.data_sources.query(
+            data_source_id=self._database_id,
             filter={
                 "and": [
                     {"property": "Pipeline", "select": {"equals": Pipeline.TO_REFINE.value}},
@@ -76,8 +76,8 @@ class NotionApi:
     def query_stale_running(self, older_than_s: float) -> list[Card]:
         """FR-017/R7: ⏳ abandonados (IA atualizado em anterior ao corte)."""
         cutoff = datetime.now(UTC) - timedelta(seconds=older_than_s)
-        response = self._client.databases.query(
-            database_id=self._database_id,
+        response = self._client.data_sources.query(
+            data_source_id=self._database_id,
             filter={
                 "and": [
                     {
@@ -171,7 +171,7 @@ class NotionApi:
             return problems
 
         try:
-            database = self._client.databases.retrieve(database_id=self._database_id)
+            database = self._client.data_sources.retrieve(data_source_id=self._database_id)
         except Exception as exc:
             problems.append(
                 f"Banco {self._database_id} inacessível ({type(exc).__name__}). "
@@ -204,6 +204,51 @@ class NotionApi:
                 f"{sorted(missing_options)}. Crie-as no board (data-model.md)."
             )
         return problems
+
+    def template_skeleton_problems(self) -> list[str]:
+        """Verificação do esqueleto 🔍 no template (verify; R1).
+
+        O heading com data vem do template na criação da página; o orquestrador
+        só preenche os corpos. Template sem esqueleto = card falha na escrita.
+        """
+        from notion_copilot.domain.rules import SECTION_HEADINGS
+
+        templates = self._list_templates()
+        if not templates:
+            return [
+                "O banco não tem template de página. Crie um template com "
+                "'## 🔍 Refinamento' e os 7 headings vazios das seções "
+                "(quickstart.md, research R1)."
+            ]
+        problems: list[str] = []
+        for template in templates:
+            name = template.get("name") or template.get("id", "?")
+            try:
+                markdown = self.get_page_markdown(template["id"])
+            except Exception as exc:
+                problems.append(
+                    f"Template {name!r}: não consegui ler o conteúdo "
+                    f"({type(exc).__name__}) — verifique a capability Read content."
+                )
+                continue
+            missing = [
+                heading
+                for heading in ("## 🔍 Refinamento", *SECTION_HEADINGS.values())
+                if heading not in markdown
+            ]
+            if missing:
+                problems.append(
+                    f"Template {name!r} sem os headings {missing}. O esqueleto "
+                    "precisa do heading '## 🔍 Refinamento' e das 7 seções vazias "
+                    "(research R1)."
+                )
+        return problems
+
+    def _list_templates(self) -> list[dict[str, Any]]:
+        response = self._client.data_sources.list_templates(
+            data_source_id=self._database_id
+        )
+        return response.get("results", []) if isinstance(response, dict) else []
 
     # ----- tradução API → domínio ----------------------------------------
 
