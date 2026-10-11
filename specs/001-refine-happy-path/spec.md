@@ -55,7 +55,9 @@ Antes de qualquer reescrita do título, o conteúdo original da captura é copia
 
 ### User Story 3 - Falha visível e rodada que continua (Priority: P3)
 
-Quando o agente falha, demora demais ou precisa de uma resposta minha, o card para de ser "um mistério rodando": o board mostra ⚠️ erro ou ❓ precisa de você, um comentário na página me notifica com o identificador da execução, e os demais cards da rodada continuam sendo processados normalmente.
+Quando o agente falha, demora demais ou precisa de uma resposta minha, o card para de ser "um mistério rodando": o board mostra ⚠️ erro ou ❓ precisa de você, um comentário na página me menciona e traz o conteúdo que importa — as perguntas bloqueantes no próprio comentário, ou a saída do erro —, e os demais cards da rodada continuam sendo processados normalmente.
+
+**Emenda 2026-10-11 (comentário como membro do workspace)**: o comentário de ⚠️/❓ não cita mais o `run_id`. O comentário carrega a parte relevante do log: no ❓, as perguntas bloqueantes listadas no corpo do comentário; no ⚠️, a saída do erro. Quem quer o rastro completo consulta os eventos JSON locais, que continuam com `run_id`.
 
 **Why this priority**: É a rede de segurança que torna as histórias 1 e 2 confiáveis no uso diário. Sem ela, uma falha congela a fila silenciosamente.
 
@@ -65,7 +67,7 @@ Quando o agente falha, demora demais ou precisa de uma resposta minha, o card pa
 
 1. **Given** um card cujo processamento falha, **When** a falha ocorrer, **Then** somente esse card recebe IA status ⚠️ erro; a rodada continua com os demais cards selecionados.
 2. **Given** um card cujo refinamento depende de informação que só eu tenho, **When** o agente identificar perguntas bloqueantes, **Then** o card recebe IA status ❓ precisa de você e vai para Refined com as perguntas abertas na seção de refinamento.
-3. **Given** uma falha ou bloqueio, **When** o IA status for definido como ⚠️ ou ❓, **Then** a página do card recebe um comentário mencionando a usuária (gerando notificação do Notion) e incluindo o identificador da execução que falhou.
+3. **Given** uma falha ou bloqueio, **When** o IA status for definido como ⚠️ ou ❓, **Then** a página do card recebe um comentário mencionando a usuária (gerando notificação do Notion) e trazendo o conteúdo relevante no corpo do comentário: as perguntas bloqueantes, no caso do ❓; a saída do erro, no caso do ⚠️.
 4. **Given** um card em ⏳ rodando há mais de 30 minutos (processo interrompido), **When** a rodada seguinte rodar, **Then** o card é marcado ⚠️ erro.
 
 ### Edge Cases
@@ -95,7 +97,7 @@ Quando o agente falha, demora demais ou precisa de uma resposta minha, o card pa
 - **FR-011**: Após gravar o resultado com sucesso, o sistema DEVE mover o card para a raia Refined e limpar o IA status.
 - **FR-012**: Se o refinamento contiver perguntas bloqueantes, o card DEVE terminar em Refined com IA status ❓ precisa de você.
 - **FR-013**: Em falha de processamento, o sistema DEVE marcar somente o card afetado como ⚠️ erro — o card permanece na raia To Refine, excluído da seleção até que a usuária limpe o IA status — e continuar a rodada com os demais cards.
-- **FR-014**: Sempre que o IA status for ⚠️ ou ❓, o sistema DEVE deixar um comentário na página do card mencionando a usuária (notificação do Notion) e incluindo o identificador da execução. A usuária é identificada por `NOTION_USER_ID` no `.env` (permissão 600), validado no pré-flight da rodada (FR-002).
+- **FR-014** *(emendado 2026-10-11)*: Sempre que o IA status for ⚠️ ou ❓, o sistema DEVE deixar um comentário na página do card que se comporte como um colega de workspace: menciona a usuária (notificação do Notion) e traz no corpo do comentário a parte relevante — no ❓, as perguntas bloqueantes listadas uma a uma (a usuária responde sem abrir a página); no ⚠️, a saída do erro (tipo e mensagem). O comentário NÃO cita o `run_id`: o identificador continua nos eventos JSON locais, que são o rastro completo. A usuária é identificada por `NOTION_USER_ID` no `.env` (permissão 600), validado no pré-flight da rodada (FR-002).
 - **FR-015**: O processamento de um card DEVE ser idempotente: reprocessar um card não cria segunda seção de refinamento, segundo bloco de registro original, nem altera o bloco 📝 existente.
 - **FR-016**: Falhas temporárias DEVEM receber até 2 novas tentativas com espera crescente; esgotadas as tentativas, o card DEVE virar ⚠️ erro.
 - **FR-017**: Um card em ⏳ rodando há mais de 30 minutos DEVE ser marcado ⚠️ erro na rodada seguinte.

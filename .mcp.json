@@ -1,0 +1,18 @@
+{
+  "mcpServers": {
+    "web_search_prime": {
+      "type": "http",
+      "url": "https://api.z.ai/api/mcp/web_search_prime/mcp",
+      "headers": {
+        "Authorization": "Bearer ${ANTHROPIC_AUTH_TOKEN}"
+      }
+    },
+    "web_reader": {
+      "type": "http",
+      "url": "https://api.z.ai/api/mcp/web_reader/mcp",
+      "headers": {
+        "Authorization": "Bearer ${ANTHROPIC_AUTH_TOKEN}"
+      }
+    }
+  }
+}

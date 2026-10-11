@@ -28,12 +28,12 @@ Validação de seleção (FR-004/FR-005): `pipeline == TO_REFINE` **e** `ia_stat
 
 | Campo | Tipo | Regras |
 |---|---|---|
-| `run_id` | str (ex.: `20261010T1425-7f3a`) | Único; citado em logs e comentários (FR-014) |
+| `run_id` | str (ex.: `20261010T1425-7f3a`) | Único; nomeia o rastro do agente e aparece nos eventos JSON de log (o comentário FR-014 carrega o conteúdo relevante, não o `run_id`) |
 | `started_at` / `finished_at` | datetime | Duração em cada evento (RNF-O1) |
 | `selected` | list[Card] | ≤ 5, mais antigos primeiro (FR-004) |
 | `results` | list[CardResult] | Uma das terminações por card (FR-018) |
 
-Invariante (FR-018): ao fim da rodada, nenhum card selecionado fica em ⏳ — cada card termina em um dos desfechos de `CardResult` acima (`success`, `needs_you`, `error`, `skipped_moved`, `skipped_already_refined`; os desfechos `skipped_*` também limpam o ⏳), exceto rodada interrompida, coberta por FR-017.
+Invariante (FR-018): ao fim da rodada, nenhum card selecionado fica em ⏳ — cada card termina em um dos desfechos de `CardResult` acima (`success`, `needs_you`, `error`, `skipped_moved`, `skipped_already_refined`; os desfechos `skipped_*` também limpam o ⏳), exceto rodada interrompida, coberta por FR-017. Estado terminal dos desfechos `skipped_*`: `skipped_moved` — o card fica na raia para onde a usuária o moveu, com IA status vazio e nenhuma escrita (R10); `skipped_already_refined` — o card é movido para Refined com IA status vazio, sem reescrever nenhuma seção (FR-015, R9).
 
 ### CardResult
 
