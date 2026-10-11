@@ -34,6 +34,6 @@ O agente (Claude Code CLI) recebe o prompt versionado (`prompts/refine.md`) já 
 
 ## Tratamento de violação
 
-- JSON inválido / fora do schema Pydantic → **erro permanente** do card (sem retry — research R8): ⚠️ + comentário com `run_id` (FR-013/FR-014).
+- JSON inválido / fora do schema Pydantic → **erro permanente** do card (sem retry — research R8): ⚠️ + comentário com a saída do erro no corpo do comentário (FR-013/FR-014).
 - O agente nunca escreve no Notion: quem preenche as seções, grava título, propriedades e comentários é o orquestrador (FR-009, constituição III).
 - A decisão "bloqueante ou não" é do **código** (lista explícita), não de interpretação de texto (constituição I).

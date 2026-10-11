@@ -99,7 +99,7 @@ def test_marks_only_the_failing_card_and_continues_the_round(tmp_path):
     assert statuses["good"] is None
 
 
-def test_ends_a_card_with_blocking_questions_with_a_comment_mentioning_user_and_run(
+def test_ends_a_card_with_blocking_questions_asking_them_in_the_comment(
     tmp_path,
 ):
     blocking = golden_agent_json(blocking=["Qual método? (a / b)"])
@@ -111,18 +111,20 @@ def test_ends_a_card_with_blocking_questions_with_a_comment_mentioning_user_and_
     page_id, text, mention = deps["writer"].comments[0]
     assert page_id == "card-1"
     assert mention == USER_ID
-    assert "run-1" in text
+    assert "1. Qual método? (a / b)" in text
+    assert "run-1" not in text  # FR-014 emendado: sem ponteiro de log
 
 
-def test_leaves_a_comment_mentioning_user_and_run_when_the_card_errors(tmp_path):
+def test_leaves_a_comment_with_the_error_output_when_the_card_errors(tmp_path):
     result, deps = invoke_card(tmp_path, agent=FakeAgent("json inválido"))
 
     assert result.outcome == "error"
     assert len(deps["writer"].comments) == 1
     _, text, mention = deps["writer"].comments[0]
     assert mention == USER_ID
-    assert "run-1" in text
     assert "agent_invalid_json" in text
+    assert "Saída do erro:" in text
+    assert "run-1" not in text
 
 
 def test_marks_a_stale_running_card_error_with_comment_before_selecting(tmp_path):
@@ -143,6 +145,7 @@ def test_marks_a_stale_running_card_error_with_comment_before_selecting(tmp_path
     stale_comments = [c for c in writer.comments if c[0] == "abandoned"]
     assert len(stale_comments) == 1
     assert stale_comments[0][2] == USER_ID
+    assert "10/10/2026" in stale_comments[0][1]  # desde quando estava em ⏳
     content = (deps["events"]._events_path).read_text()
     assert "card_marked_stale" in content
 

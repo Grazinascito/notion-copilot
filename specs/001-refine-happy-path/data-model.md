@@ -28,7 +28,7 @@ Validação de seleção (FR-004/FR-005): `pipeline == TO_REFINE` **e** `ia_stat
 
 | Campo | Tipo | Regras |
 |---|---|---|
-| `run_id` | str (ex.: `20261010T1425-7f3a`) | Único; citado em logs e comentários (FR-014) |
+| `run_id` | str (ex.: `20261010T1425-7f3a`) | Único; nomeia o rastro do agente e aparece nos eventos JSON de log (o comentário FR-014 carrega o conteúdo relevante, não o `run_id`) |
 | `started_at` / `finished_at` | datetime | Duração em cada evento (RNF-O1) |
 | `selected` | list[Card] | ≤ 5, mais antigos primeiro (FR-004) |
 | `results` | list[CardResult] | Uma das terminações por card (FR-018) |

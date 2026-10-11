@@ -19,6 +19,7 @@ from notion_copilot.application.process_card import process_card
 from notion_copilot.config import Settings
 from notion_copilot.domain.models import Card, CardResult, IAStatus, new_run_id
 from notion_copilot.domain.rules import (
+    build_stale_comment,
     is_eligible,
     is_stale,
     select_cards,
@@ -149,8 +150,7 @@ def _mark_stale_card(
         with_retry(
             lambda: writer.add_comment(
                 card.page_id,
-                "⚠️ Erro: o card ficou em ⏳ por mais de 30 minutos "
-                "(processo interrompido). Execução " + run_id + ".",
+                build_stale_comment(card.ia_updated_at),
                 settings.notion_user_id,
             ),
             backoff_s=settings.retry_backoff_s,

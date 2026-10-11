@@ -33,6 +33,8 @@ from notion_copilot.domain.models import (
     RefineOutput,
 )
 from notion_copilot.domain.rules import (
+    build_error_comment,
+    build_needs_you_comment,
     build_original_record_block,
     build_refinement_insert,
     build_section_fill_ops,
@@ -256,8 +258,7 @@ def _cycle(
             notion_user_id,
             retry_backoff_s,
             sleep,
-            "❓ Precisa de você: há pergunta(s) bloqueante(s) na seção "
-            "'Perguntas abertas' da página. Execução ",
+            build_needs_you_comment(output),
         )
     return CardResult(
         card_id=card.page_id,
@@ -302,7 +303,7 @@ def _fail(
         notion_user_id,
         retry_backoff_s,
         sleep,
-        f"⚠️ Falha no processamento ({error_kind}): {str(exc)[:150]}. Execução ",
+        build_error_comment(error_kind, str(exc)),
     )
     return CardResult(
         card_id=card.page_id,
@@ -321,10 +322,11 @@ def _comment(
     notion_user_id: str,
     retry_backoff_s: list[int],
     sleep: Callable[[float], None],
-    message_prefix: str,
+    text: str,
 ) -> None:
-    """FR-014/R6: comentário com menção (notificação) e run_id (RNF-O4)."""
-    text = f"{message_prefix}{run_id}."
+    """FR-014 (emendado)/R6: comentário com menção (notificação); o corpo traz
+    o conteúdo relevante — perguntas ou saída do erro — não o `run_id`
+    (RNF-O4: o rastro completo é o log local)."""
     try:
         with_retry(
             lambda: writer.add_comment(page_id, text, notion_user_id),

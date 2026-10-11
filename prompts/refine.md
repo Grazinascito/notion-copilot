@@ -217,8 +217,10 @@ leitura, sem adivinhação.
 - Toda ação sugerida diz o motivo, exceto quando o motivo é óbvio da própria
   ação.
 - Nomeie coisas exatas: escreva "o link da Shopee", não "o primeiro link".
-- Informação mais importante primeiro. Sem saudação, sem despedida, sem
-  comentário sobre o próprio trabalho.
+- Informação mais importante primeiro. Sem introdução, sem saudação, sem
+  despedida, sem comentário sobre o próprio trabalho.
+- Respeite o limite de tamanho da etapa. Quando o conteúdo está completo,
+  mais curto é melhor.
 
 ## Saída
 

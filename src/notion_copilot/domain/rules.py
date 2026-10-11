@@ -168,6 +168,63 @@ def build_refinement_insert(output: RefineOutput, now: datetime) -> str:
     return "\n\n".join(lines)
 
 
+# FR-014 (emendado 2026-10-11): a API do Notion aceita até 2000 caracteres por
+# objeto rich_text; 1900 deixa folga para a menção e o espaço que o adapter
+# acrescenta na frente.
+COMMENT_MAX_CHARS = 1900
+
+RETRY_HINT = (
+    "Para tentar de novo, limpe o IA status do card — ele volta para a fila "
+    "de refinamento."
+)
+
+
+def _fit(text: str) -> str:
+    """Trunca para o limite do comentário, marcando o corte."""
+    if len(text) <= COMMENT_MAX_CHARS:
+        return text
+    marker = "\n(truncado)"
+    return text[: COMMENT_MAX_CHARS - len(marker)] + marker
+
+
+def build_needs_you_comment(output: RefineOutput) -> str:
+    """FR-014 no ❓: as perguntas bloqueantes vêm no corpo do comentário —
+    a leitora responde sem abrir a página. Sem `run_id`: o rastro completo
+    continua nos eventos JSON locais."""
+    questions = "\n".join(
+        f"{n}. {question}" for n, question in enumerate(output.blocking_questions, 1)
+    )
+    return _fit(
+        "❓ Precisa de você: perguntas que bloqueiam o próximo passo."
+        f"\n\n{questions}"
+    )
+
+
+def build_error_comment(error_kind: str, message: str) -> str:
+    """FR-014 no ⚠️: a saída do erro (tipo + mensagem) vem no corpo do
+    comentário."""
+    return _fit(
+        f"⚠️ Falha no processamento ({error_kind}).\n\n"
+        f"Saída do erro:\n{message}\n\n"
+        f"{RETRY_HINT}"
+    )
+
+
+def build_stale_comment(started_at: datetime | None) -> str:
+    """FR-017 no ⚠️ abandonado: diz desde quando o card estava em ⏳ e como
+    tentar de novo."""
+    since = (
+        f"desde {started_at.strftime('%d/%m/%Y %H:%M')} e passou de 30 minutos"
+        if started_at
+        else "há mais de 30 minutos"
+    )
+    return _fit(
+        f"⚠️ Falha: este card ficou em ⏳ rodando {since}. "
+        "O processo foi interrompido antes de terminar."
+        f"\n\n{RETRY_HINT}"
+    )
+
+
 def render_properties(card: Card) -> str:
     """Propriedades do card para o prompt; '(vazio)' marca propriedade vazia.
 

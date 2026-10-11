@@ -14,10 +14,15 @@ class FakeAPIError(Exception):
         self.code = code
 
 
-def test_posts_a_comment_with_user_mention_and_run_id():
+def test_posts_a_comment_with_user_mention_and_content():
     api = make_api()
 
-    api.add_comment(PAGE_ID, "⚠️ Falha (agent_invalid_json). Execução r1.", "user-123")
+    api.add_comment(
+        PAGE_ID,
+        "⚠️ Falha no processamento (agent_invalid_json).\n\n"
+        "Saída do erro:\nExpecting value: line 1 column 1",
+        "user-123",
+    )
 
     (name, kwargs), *_ = [c for c in api._client.calls if c[0] == "comments.create"]
     assert kwargs["parent"] == {"page_id": PAGE_ID}
@@ -26,7 +31,9 @@ def test_posts_a_comment_with_user_mention_and_run_id():
         "type": "mention",
         "mention": {"user": {"id": "user-123"}},
     }
-    assert "Execução r1." in rich_text[1]["text"]["content"]
+    content = rich_text[1]["text"]["content"]
+    assert "Saída do erro:" in content
+    assert "Expecting value" in content
 
 
 def test_translates_rate_limit_and_5xx_into_temporary_failure():

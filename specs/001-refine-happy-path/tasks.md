@@ -145,6 +145,20 @@ Single project: código em `src/notion_copilot/`, prompts em `prompts/`, testes 
 
 ---
 
+## Phase 7: Amendment 2026-10-11 — Comentário como membro do workspace
+
+**Purpose**: Duas mudanças de plano pedidas pela usuária após o uso piloto: (1) o comentário de ⚠️/❓ menciona a usuária e traz o conteúdo relevante no próprio corpo — perguntas bloqueantes listadas (❓) ou saída do erro (⚠️) — em vez de apontar o `run_id`; (2) o prompt recebe as linhas que faltavam do bloco de estilo de escrita (limite de tamanho da etapa e "sem introdução").
+
+- [x] T048 Amendar os documentos da feature para o novo FR-014: spec.md (proposta de valor US-3, cenário 3, FR-014), data-model.md (linha do `run_id`), contracts/agent-output.md (tratamento de violação) — o comentário carrega conteúdo, não identificador
+- [x] T049 [P] Write unit tests FIRST in `tests/unit/domain/test_comment_texts.py`: "the needs-you comment lists each blocking question on its own line"; "comments never cite the run_id"; "the error comment includes the error kind and the error output"; "the error comment truncates output longer than the comment limit"; "the stale comment states since when the card was running and how to retry" — confirm they FAIL
+- [x] T050 Implement pure comment builders in `src/notion_copilot/domain/rules.py` (parte 4): `build_needs_you_comment(output)`, `build_error_comment(error_kind, message)`, `build_stale_comment(started_at)` — texto em PT-BR, estilo low-inference, limite de 2000 caracteres da API respeitado com truncamento
+- [x] T051 Rewire `src/notion_copilot/application/process_card.py` (❓ e `_fail`) e `src/notion_copilot/application/run_round.py` (`_mark_stale_card`) para usar os construtores; nenhum comentário concatena `run_id`
+- [x] T052 Update `tests/unit/application/test_failure_visibility.py` (pergunta no corpo do comentário; sem "Execução") e `tests/integration/test_notion_comments.py` (payload com o novo texto)
+- [x] T053 [P] Add to `prompts/refine.md` (Estilo de escrita): "Respeite o limite de tamanho da etapa..." e "Sem introdução" — alinha o prompt ao bloco de estilo da usuária
+- [x] T054 Run quality gates and fix findings: `uv run pytest`, `uv run ruff check .`, `uv run mypy src` — tudo verde; commit da emenda
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
