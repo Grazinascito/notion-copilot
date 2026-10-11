@@ -4,6 +4,7 @@
 
 from __future__ import annotations
 
+import re
 from datetime import datetime
 
 from notion_copilot.domain.models import (
@@ -28,6 +29,7 @@ SECTION_HEADINGS: dict[str, str] = {
 }
 
 REFINEMENT_HEADING = "## 🔍 Refinamento"
+ORIGINAL_RECORD_HEADING = "## 📝 Registro original"
 
 
 def is_eligible(card: Card) -> bool:
@@ -62,6 +64,50 @@ def has_refinement_skeleton(markdown: str) -> bool:
     return REFINEMENT_HEADING in markdown
 
 
+def has_original_record(markdown: str) -> bool:
+    """FR-015/R9: a página já tem o bloco 📝 Registro original?"""
+    return ORIGINAL_RECORD_HEADING in markdown
+
+
+def has_refinement(markdown: str) -> bool:
+    """FR-015/R9: alguma seção do contrato já tem corpo entre seu heading e o
+    heading seguinte? O heading sozinho (esqueleto) NÃO conta — a página é a
+    verdade, não uma flag em propriedade.
+    """
+    for key in REFINE_SECTION_KEYS:
+        heading = SECTION_HEADINGS[key]
+        idx = markdown.find(heading)
+        if idx == -1:
+            continue
+        after = markdown[idx + len(heading) :]
+        next_heading = re.search(r"^#{1,6} ", after, re.M)
+        body = after[: next_heading.start()] if next_heading else after
+        if body.strip():
+            return True
+    return False
+
+
+def extract_refinement_heading_line(markdown: str) -> str | None:
+    """Linha completa do heading 🔍 (com a data) — old_str exato para inserir
+    o bloco 📝 antes dela."""
+    match = re.search(rf"^{re.escape(REFINEMENT_HEADING)}.*$", markdown, re.M)
+    return match.group(0) if match else None
+
+
+def build_original_record_block(title: str, body: str) -> str:
+    """FR-006: bloco imutável com o texto exato da captura (título + corpo)."""
+    block = f"{ORIGINAL_RECORD_HEADING}\n\n> {title}"
+    if body.strip():
+        block += f"\n\n{body}"
+    return block
+
+
+def capture_body_for_record(markdown: str) -> str:
+    """Corpo da captura para o 📝: o markdown da página sem a seção de
+    refinamento (em rodadas interrompidas, o esqueleto não é captura)."""
+    return markdown.split(REFINEMENT_HEADING)[0].strip()
+
+
 def build_refinement_insert(output: RefineOutput, now: datetime) -> str:
     """ADR-008: bloco markdown completo da seção, para páginas sem esqueleto.
 
@@ -77,7 +123,16 @@ def build_refinement_insert(output: RefineOutput, now: datetime) -> str:
 
 
 def render_properties(card: Card) -> str:
-    """Propriedades do card para o prompt; '(vazio)' marca propriedade vazia."""
+    """Propriedades do card para o prompt; '(vazio)' marca propriedade vazia.
+
+    Prefere o mapa completo (todas as propriedades do card: Type, Area, Due
+    Date, Details…); sem o mapa, renderiza os campos estruturados.
+    """
+    if card.properties:
+        return "\n".join(
+            f"{name}: {value if value else '(vazio)'}"
+            for name, value in card.properties.items()
+        )
     return "\n".join(
         [
             f"Pipeline: {card.pipeline.value}",

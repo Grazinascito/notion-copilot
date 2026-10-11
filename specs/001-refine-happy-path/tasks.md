@@ -99,13 +99,13 @@ Single project: código em `src/notion_copilot/`, prompts em `prompts/`, testes 
 
 ### Tests for User Story 2 (write FIRST, confirm they FAIL)
 
-- [ ] T033 [P] [US2] Write unit tests in `tests/unit/domain/test_idempotency_markers.py`: "detects the 📝 Registro original block"; "detects a filled section body between a template heading and the next heading"; "does not treat the template 🔍 skeleton alone as a refinement" (research R9 — heading sozinho não é marcador)
-- [ ] T034 [P] [US2] Write unit tests in `tests/unit/application/test_original_record.py` (fakes): "creates the 📝 block with the exact capture text before any title rewrite and before the 🔍 section" (FR-006, US-2.1); "does not create a second 📝 block when the marker is present" (FR-015); "ends an already-refined card as skipped_already_refined: moved to Refined, empty status, no rewrites" (R9); "fills the sections while preserving an existing 📝 from an interrupted run" (R9)
+- [x] T033 [P] [US2] Write unit tests in `tests/unit/domain/test_idempotency_markers.py`: "detects the 📝 Registro original block"; "detects a filled section body between a template heading and the next heading"; "does not treat the template 🔍 skeleton alone as a refinement" (research R9 — heading sozinho não é marcador)
+- [x] T034 [P] [US2] Write unit tests in `tests/unit/application/test_original_record.py` (fakes): "creates the 📝 block with the exact capture text before any title rewrite and before the 🔍 section" (FR-006, US-2.1); "does not create a second 📝 block when the marker is present" (FR-015); "ends an already-refined card as skipped_already_refined: moved to Refined, empty status, no rewrites" (R9); "fills the sections while preserving an existing 📝 from an interrupted run" (R9)
 
 ### Implementation for User Story 2
 
-- [ ] T035 [US2] Implement in `src/notion_copilot/domain/rules.py` (parte 2): marcadores puros `has_original_record` e `has_refinement` sobre a string markdown (a página é a verdade — research R9) e o construtor do bloco 📝 via update_content com `old_str` = `## 🔍 Refinamento` e `new_str` = `📝 Registro original` + texto exato da captura + `## 🔍 Refinamento` (posiciona antes da seção — R1)
-- [ ] T036 [US2] Integrate markers into `src/notion_copilot/application/process_card.py`: ler markdown antes de escrever; 📝 existente → não recria nem altera; seção já preenchida → não reescreve; já refinado → desfecho `skipped_already_refined` (mover para Refined, IA status vazio, nenhuma escrita); 📝 criado antes da reescrita do título (FR-006/FR-015)
+- [x] T035 [US2] Implement in `src/notion_copilot/domain/rules.py` (parte 2): marcadores puros `has_original_record` e `has_refinement` sobre a string markdown (a página é a verdade — research R9) e o construtor do bloco 📝 via update_content com `old_str` = `## 🔍 Refinamento` e `new_str` = `📝 Registro original` + texto exato da captura + `## 🔍 Refinamento` (posiciona antes da seção — R1)
+- [x] T036 [US2] Integrate markers into `src/notion_copilot/application/process_card.py`: ler markdown antes de escrever; 📝 existente → não recria nem altera; seção já preenchida → não reescreve; já refinado → desfecho `skipped_already_refined` (mover para Refined, IA status vazio, nenhuma escrita); 📝 criado antes da reescrita do título (FR-006/FR-015)
 
 **Checkpoint**: US-1 e US-2 funcionam de forma independente — reprocessar um card não cria duplicatas (SC-002).
 

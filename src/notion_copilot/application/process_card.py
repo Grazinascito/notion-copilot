@@ -22,11 +22,17 @@ from notion_copilot.domain.models import (
     CardResult,
     Executor,
     IAStatus,
+    MarkdownUpdate,
     RefineOutput,
 )
 from notion_copilot.domain.rules import (
+    build_original_record_block,
     build_refinement_insert,
     build_section_fill_ops,
+    capture_body_for_record,
+    extract_refinement_heading_line,
+    has_original_record,
+    has_refinement,
     has_refinement_skeleton,
     render_prompt,
 )
@@ -84,6 +90,25 @@ def _cycle(
 
     # FR-007: todo o conteúdo do card vai no prompt (o agente não lê o Notion)
     markdown = reader.get_page_markdown(card.page_id)
+
+    # FR-015/R9: card já refinado reprocessado por engano — nenhuma escrita de
+    # conteúdo; desfecho skipped_already_refined (move + limpa status)
+    if has_refinement(markdown):
+        writer.move_to_refined(card.page_id)
+        writer.set_ia_status(card.page_id, None, now=clock.now())
+        events.emit(
+            run_id=run_id,
+            card_id=card.page_id,
+            stage="write",
+            event="card_skipped_already_refined",
+        )
+        return CardResult(
+            card_id=card.page_id,
+            outcome="skipped_already_refined",
+            attempts=1,
+            duration_s=(clock.now() - started).total_seconds(),
+        )
+
     full_card = card.model_copy(update={"body_markdown": markdown})
     prompt = render_prompt(prompt_template, full_card)
     raw = agent.run_refine(prompt, run_id, card.page_id)
@@ -92,15 +117,30 @@ def _cycle(
     # Pydantic na fronteira: JSON fora do contrato é erro permanente (R8)
     output = RefineOutput.model_validate_json(raw)
 
-    # FR-009/FR-010: o orquestrador grava as 7 seções. Página com esqueleto
-    # (veio do template) → uma operação update_content por seção (R1); página
-    # sem esqueleto → o orquestrador cria a seção completa (ADR-008).
-    if has_refinement_skeleton(markdown):
-        writer.apply_markdown_updates(card.page_id, build_section_fill_ops(output))
-    else:
-        writer.append_markdown(
-            card.page_id, build_refinement_insert(output, now=clock.now())
+    # FR-009/FR-010: o orquestrador grava as 7 seções. FR-006: o 📝 Registro
+    # original — texto exato da captura — vem ANTES de qualquer reescrita, nos
+    # dois caminhos: página com esqueleto → update_content (R1); sem esqueleto
+    # → o orquestrador cria a seção completa (ADR-008).
+    record = None
+    if not has_original_record(markdown):
+        record = build_original_record_block(
+            card.title, capture_body_for_record(markdown)
         )
+
+    if has_refinement_skeleton(markdown):
+        updates: list[MarkdownUpdate] = build_section_fill_ops(output)
+        heading_line = extract_refinement_heading_line(markdown)
+        if record is not None and heading_line is not None:
+            updates.insert(
+                0,
+                MarkdownUpdate(
+                    old_str=heading_line, new_str=f"{record}\n\n{heading_line}"
+                ),
+            )
+        writer.apply_markdown_updates(card.page_id, updates)
+    else:
+        block = f"{record}\n\n{build_refinement_insert(output, now=clock.now())}" if record else build_refinement_insert(output, now=clock.now())
+        writer.append_markdown(card.page_id, block)
     events.emit(run_id=run_id, card_id=card.page_id, stage="write", event="sections_written")
 
     writer.set_title(card.page_id, output.title)

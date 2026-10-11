@@ -64,6 +64,9 @@ class Card(BaseModel):
     body_markdown: str = ""
     has_refinement: bool = False
     has_original_record: bool = False
+    # Todas as propriedades do card como texto ("Nome: valor"), entregues ao
+    # agente no prompt (FR-007) — Type, Area, Due Date, Details etc.
+    properties: dict[str, str] = Field(default_factory=dict)
 
 
 class CardResult(BaseModel):

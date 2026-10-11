@@ -67,7 +67,8 @@ def test_treats_invalid_agent_json_as_a_permanent_error_with_no_retry(tmp_path):
 
 
 def test_writes_each_of_the_seven_sections_one_update_per_section(tmp_path):
-    """Página com esqueleto do template: preenche com update_content (R1)."""
+    """Página com esqueleto do template e sem 📝: grava o 📝 (FR-006) e
+    preenche as 7 seções com update_content (R1)."""
     result, deps, _ = invoke(tmp_path)
 
     assert result.outcome == "success"
@@ -75,12 +76,14 @@ def test_writes_each_of_the_seven_sections_one_update_per_section(tmp_path):
     assert len(deps["writer"].updates) == 1
     page_id, updates = deps["writer"].updates[0]
     assert page_id == "card-1"
-    assert len(updates) == 7
-    assert all(op.old_str.startswith("### ") for op in updates)
+    assert len(updates) == 8  # 1 📝 + 7 seções
+    assert updates[0].old_str.startswith("## 🔍 Refinamento")
+    assert updates[0].new_str.startswith("## 📝 Registro original")
+    assert all(op.old_str.startswith("### ") for op in updates[1:])
 
 
 def test_creates_the_full_refinement_section_when_the_page_has_no_skeleton(tmp_path):
-    """Página sem template: o orquestrador cria a seção completa (ADR-008)."""
+    """Página sem template: o orquestrador cria 📝 + seção completa (ADR-008)."""
     result, deps, _ = invoke(tmp_path, markdown="só a frase da captura")
 
     assert result.outcome == "success"
@@ -88,7 +91,10 @@ def test_creates_the_full_refinement_section_when_the_page_has_no_skeleton(tmp_p
     assert len(deps["writer"].appends) == 1
     page_id, block = deps["writer"].appends[0]
     assert page_id == "card-1"
-    assert block.startswith("## 🔍 Refinamento — 10/10/2026 12:00")
+    assert block.startswith("## 📝 Registro original")
+    assert block.index("## 📝 Registro original") < block.index(
+        "## 🔍 Refinamento — 10/10/2026 12:00"
+    )
     assert "### Contexto" in block and "### Executor sugerido" in block
 
 

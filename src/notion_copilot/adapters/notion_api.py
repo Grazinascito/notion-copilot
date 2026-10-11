@@ -231,6 +231,13 @@ class NotionApi:
             raise ValueError(
                 f"Pipeline ausente ou desconhecido na página {page.get('id')!r}"
             )
+        rendered: dict[str, str] = {}
+        for name, prop in properties.items():
+            if name == "Name":
+                continue  # título entregue em separado
+            text = self._property_text(prop)
+            if text is not None:
+                rendered[name] = text
         return Card(
             page_id=page["id"],
             title=self._title_text(properties.get("Name", {})),
@@ -242,7 +249,38 @@ class NotionApi:
             body_markdown="",
             has_refinement=False,
             has_original_record=False,
+            properties=rendered,
         )
+
+    @staticmethod
+    def _property_text(prop: dict[str, Any]) -> str | None:
+        """Propriedade do Notion como texto legível; None para tipos que não
+        fazem sentido no prompt (pessoas, métricas internas)."""
+        ptype = prop.get("type")
+        if ptype in ("title", "people", "created_by", "last_edited_by",
+                     "created_time", "last_edited_time", "rollup", "formula",
+                     "relation", "unique_id", "button"):
+            return None
+        if ptype in ("rich_text",):
+            return "".join(t.get("plain_text", "") for t in prop.get("rich_text", []))
+        if ptype == "select":
+            return (prop.get("select") or {}).get("name")
+        if ptype == "status":
+            return (prop.get("status") or {}).get("name")
+        if ptype == "multi_select":
+            names = [o.get("name", "") for o in prop.get("multi_select", [])]
+            return ", ".join(n for n in names if n) or None
+        if ptype == "date":
+            date = prop.get("date") or {}
+            if not date.get("start"):
+                return None
+            return date["end"] and f"{date['start']} a {date['end']}" or date["start"]
+        if ptype in ("number", "checkbox", "url", "email", "phone_number"):
+            value = prop.get(ptype)
+            if value is None or value == "":
+                return None
+            return str(value)
+        return None
 
     @staticmethod
     def _title_text(prop: dict[str, Any]) -> str:
