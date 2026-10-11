@@ -4,6 +4,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime
+
 from notion_copilot.domain.models import (
     REFINE_SECTION_KEYS,
     Card,
@@ -12,8 +14,9 @@ from notion_copilot.domain.models import (
     RefineOutput,
 )
 
-# Headings do template do banco (research R1): a página nasce com eles e o
-# orquestrador preenche os corpos. Chave = seção do contrato do agente.
+# Headings do template (research R1): páginas criadas a partir do template do
+# banco nascem com eles. Quando a página não tem o esqueleto, o orquestrador
+# o cria (ADR-008) — o agente nunca escreve headings.
 SECTION_HEADINGS: dict[str, str] = {
     "contexto": "### Contexto",
     "links_guardados": "### Links guardados",
@@ -23,6 +26,8 @@ SECTION_HEADINGS: dict[str, str] = {
     "prompt_sugerido": "### Prompt sugerido",
     "executor_sugerido": "### Executor sugerido",
 }
+
+REFINEMENT_HEADING = "## 🔍 Refinamento"
 
 
 def is_eligible(card: Card) -> bool:
@@ -50,6 +55,25 @@ def build_section_fill_ops(output: RefineOutput) -> list[MarkdownUpdate]:
         )
         for key in REFINE_SECTION_KEYS
     ]
+
+
+def has_refinement_skeleton(markdown: str) -> bool:
+    """ADR-008: a página tem o heading da seção de refinamento?"""
+    return REFINEMENT_HEADING in markdown
+
+
+def build_refinement_insert(output: RefineOutput, now: datetime) -> str:
+    """ADR-008: bloco markdown completo da seção, para páginas sem esqueleto.
+
+    O heading com data e os 7 headings são criados pelo orquestrador (em
+    código) — não dependem do template do banco nem do agente. Formato de data
+    igual ao que o template do Notion renderiza (DD/MM/AAAA HH:MM).
+    """
+    lines = [f"{REFINEMENT_HEADING} — {now.strftime('%d/%m/%Y %H:%M')}"]
+    for key in REFINE_SECTION_KEYS:
+        lines.append(SECTION_HEADINGS[key])
+        lines.append(output.sections[key])
+    return "\n\n".join(lines)
 
 
 def render_properties(card: Card) -> str:

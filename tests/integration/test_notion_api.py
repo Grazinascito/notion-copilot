@@ -96,7 +96,6 @@ class FakeNotionClient:
         database_response=None,
         query_response=None,
         markdown=SKELETON_MARKDOWN,
-        templates=None,
     ) -> None:
         self.calls: list = []
         users = _NS()
@@ -111,11 +110,6 @@ class FakeNotionClient:
             self.calls,
             "data_sources.query",
             query_response if query_response is not None else {"results": [RECORDED_PAGE]},
-        )
-        data_sources.list_templates = FakeEndpoint(
-            self.calls,
-            "data_sources.list_templates",
-            {"results": templates if templates is not None else [{"id": "tpl-1", "name": "Refine"}]},
         )
         pages = _NS()
         pages.retrieve = FakeEndpoint(self.calls, "pages.retrieve", RECORDED_PAGE)
@@ -237,29 +231,27 @@ def test_check_problems_reports_missing_properties_with_a_fix_hint():
     assert any("IA status" in problem for problem in problems)
 
 
+def test_appends_the_refinement_skeleton_via_insert_content():
+    api = make_api()
+
+    api.append_markdown(PAGE_ID, "## 🔍 Refinamento — 10/10/2026 12:00\n### Contexto\nx")
+
+    (name, kwargs), *_ = [
+        c for c in api._client.calls if c[0] == "pages.update_markdown"
+    ]
+    assert kwargs == {
+        "page_id": PAGE_ID,
+        "commands": [
+            {
+                "type": "insert_content",
+                "position": "end",
+                "content": "## 🔍 Refinamento — 10/10/2026 12:00\n### Contexto\nx",
+            }
+        ],
+    }
+
+
 def test_check_problems_passes_on_a_valid_database():
     api = make_api()
 
     assert api.check_problems() == []
-
-
-def test_template_skeleton_problems_reports_a_missing_template():
-    api = make_api(FakeNotionClient(templates=[]))
-
-    problems = api.template_skeleton_problems()
-
-    assert any("não tem template" in problem for problem in problems)
-
-
-def test_template_skeleton_problems_reports_missing_headings():
-    api = make_api(markdown="## 🔍 Refinamento\n\n### Contexto\n")
-
-    problems = api.template_skeleton_problems()
-
-    assert any("### Links guardados" in problem for problem in problems)
-
-
-def test_template_skeleton_problems_passes_on_a_complete_skeleton():
-    api = make_api()
-
-    assert api.template_skeleton_problems() == []

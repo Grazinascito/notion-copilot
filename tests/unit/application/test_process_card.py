@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from tests.unit.application.fakes import (
+    SKELETON_MARKDOWN,
     FakeAgent,
     FakeClock,
     FakeReader,
@@ -18,11 +19,11 @@ from notion_copilot.domain.models import IAStatus
 TEMPLATE = "T: {{TITULO}}\nP:\n{{PROPRIEDADES}}\nB: {{CORPO}}"
 
 
-def invoke(tmp_path, *, agent_raw=None, card=None):
+def invoke(tmp_path, *, agent_raw=None, card=None, markdown=SKELETON_MARKDOWN):
     journal: list = []
     card = card or make_card()
     deps = {
-        "reader": FakeReader([card], markdown="corpo original", journal=journal),
+        "reader": FakeReader([card], markdown=markdown, journal=journal),
         "writer": FakeWriter(journal=journal),
         "agent": FakeAgent(agent_raw or golden_agent_json(), journal=journal),
         "clock": FakeClock(),
@@ -44,13 +45,13 @@ def test_marks_the_card_running_before_invoking_the_agent(tmp_path):
 
 
 def test_delivers_title_properties_and_body_inside_the_prompt(tmp_path):
-    result, deps, _ = invoke(tmp_path)
+    result, deps, _ = invoke(tmp_path, markdown="ligar pra estacio. corpo com detalhes")
 
     assert result.outcome == "success"
     prompt = deps["agent"].prompts[0]
     assert "ligar pra estacio pra saber como pegar bolsa do curso" in prompt
     assert "Pipeline: To Refine" in prompt
-    assert "corpo original" in prompt
+    assert "corpo com detalhes" in prompt
     assert "{{" not in prompt
 
 
@@ -66,14 +67,29 @@ def test_treats_invalid_agent_json_as_a_permanent_error_with_no_retry(tmp_path):
 
 
 def test_writes_each_of_the_seven_sections_one_update_per_section(tmp_path):
+    """Página com esqueleto do template: preenche com update_content (R1)."""
     result, deps, _ = invoke(tmp_path)
 
     assert result.outcome == "success"
+    assert deps["writer"].appends == []
     assert len(deps["writer"].updates) == 1
     page_id, updates = deps["writer"].updates[0]
     assert page_id == "card-1"
     assert len(updates) == 7
     assert all(op.old_str.startswith("### ") for op in updates)
+
+
+def test_creates_the_full_refinement_section_when_the_page_has_no_skeleton(tmp_path):
+    """Página sem template: o orquestrador cria a seção completa (ADR-008)."""
+    result, deps, _ = invoke(tmp_path, markdown="só a frase da captura")
+
+    assert result.outcome == "success"
+    assert deps["writer"].updates == []
+    assert len(deps["writer"].appends) == 1
+    page_id, block = deps["writer"].appends[0]
+    assert page_id == "card-1"
+    assert block.startswith("## 🔍 Refinamento — 10/10/2026 12:00")
+    assert "### Contexto" in block and "### Executor sugerido" in block
 
 
 def test_rewrites_the_title_and_fills_executor_only_when_it_is_empty(tmp_path):

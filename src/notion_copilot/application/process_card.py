@@ -24,7 +24,12 @@ from notion_copilot.domain.models import (
     IAStatus,
     RefineOutput,
 )
-from notion_copilot.domain.rules import build_section_fill_ops, render_prompt
+from notion_copilot.domain.rules import (
+    build_refinement_insert,
+    build_section_fill_ops,
+    has_refinement_skeleton,
+    render_prompt,
+)
 
 
 def process_card(
@@ -87,8 +92,15 @@ def _cycle(
     # Pydantic na fronteira: JSON fora do contrato é erro permanente (R8)
     output = RefineOutput.model_validate_json(raw)
 
-    # FR-009/FR-010: o orquestrador grava as 7 seções, uma operação por seção (R1)
-    writer.apply_markdown_updates(card.page_id, build_section_fill_ops(output))
+    # FR-009/FR-010: o orquestrador grava as 7 seções. Página com esqueleto
+    # (veio do template) → uma operação update_content por seção (R1); página
+    # sem esqueleto → o orquestrador cria a seção completa (ADR-008).
+    if has_refinement_skeleton(markdown):
+        writer.apply_markdown_updates(card.page_id, build_section_fill_ops(output))
+    else:
+        writer.append_markdown(
+            card.page_id, build_refinement_insert(output, now=clock.now())
+        )
     events.emit(run_id=run_id, card_id=card.page_id, stage="write", event="sections_written")
 
     writer.set_title(card.page_id, output.title)

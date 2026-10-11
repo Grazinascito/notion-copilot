@@ -127,6 +127,24 @@ class NotionApi:
             ],
         )
 
+    def append_markdown(self, page_id: str, markdown: str) -> None:
+        """ADR-008: insere o esqueleto 🔍 completo ao fim da página.
+
+        insert_content é classificado como legacy, mas é o comando certo para
+        criar conteúdo novo — update_content só substitui o que já existe.
+        Campo do corpo ("content") é ponto de verificação em runtime.
+        """
+        self._client.pages.update_markdown(
+            page_id=page_id,
+            commands=[
+                {
+                    "type": "insert_content",
+                    "position": "end",
+                    "content": markdown,
+                }
+            ],
+        )
+
     def set_title(self, page_id: str, title: str) -> None:
         self._client.pages.update(
             page_id=page_id,
@@ -204,51 +222,6 @@ class NotionApi:
                 f"{sorted(missing_options)}. Crie-as no board (data-model.md)."
             )
         return problems
-
-    def template_skeleton_problems(self) -> list[str]:
-        """Verificação do esqueleto 🔍 no template (verify; R1).
-
-        O heading com data vem do template na criação da página; o orquestrador
-        só preenche os corpos. Template sem esqueleto = card falha na escrita.
-        """
-        from notion_copilot.domain.rules import SECTION_HEADINGS
-
-        templates = self._list_templates()
-        if not templates:
-            return [
-                "O banco não tem template de página. Crie um template com "
-                "'## 🔍 Refinamento' e os 7 headings vazios das seções "
-                "(quickstart.md, research R1)."
-            ]
-        problems: list[str] = []
-        for template in templates:
-            name = template.get("name") or template.get("id", "?")
-            try:
-                markdown = self.get_page_markdown(template["id"])
-            except Exception as exc:
-                problems.append(
-                    f"Template {name!r}: não consegui ler o conteúdo "
-                    f"({type(exc).__name__}) — verifique a capability Read content."
-                )
-                continue
-            missing = [
-                heading
-                for heading in ("## 🔍 Refinamento", *SECTION_HEADINGS.values())
-                if heading not in markdown
-            ]
-            if missing:
-                problems.append(
-                    f"Template {name!r} sem os headings {missing}. O esqueleto "
-                    "precisa do heading '## 🔍 Refinamento' e das 7 seções vazias "
-                    "(research R1)."
-                )
-        return problems
-
-    def _list_templates(self) -> list[dict[str, Any]]:
-        response = self._client.data_sources.list_templates(
-            data_source_id=self._database_id
-        )
-        return response.get("results", []) if isinstance(response, dict) else []
 
     # ----- tradução API → domínio ----------------------------------------
 

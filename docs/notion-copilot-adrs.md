@@ -11,6 +11,7 @@
 | ADR-005 | Busca na web: MCP servers da Z.ai | ✅ Aceito |
 | ADR-006 | Escrita do resultado: API no Refine/Plan, MCP no Execute | ✅ Aceito |
 | ADR-007 | Intervalo do scheduler: 5 minutos; seleção somente IA status vazio | ✅ Aceito |
+| ADR-008 | Esqueleto 🔍 criado pelo orquestrador, sem dependência de template do banco | ✅ Aceito |
 
 ---
 
@@ -207,3 +208,33 @@ A segurança do intervalo menor vem de duas proteções que o ADR-001 não tinha
 
 - Positivas: a espera máxima entre mover o card e a rodada cai de até 15 para até 5 minutos; filas cheias esvaziam mais rápido (até 5 cards por rodada, ~4 rodadas/hora).
 - Negativas: 3 rodadas a mais por hora que acordam com fila vazia (custo: 1 consulta de API cada, desprezável — research R7); rodadas sobrepostas passam a ser o caso comum, cobertas pelo lock.
+
+---
+
+## ADR-008 — Esqueleto 🔍 criado pelo orquestrador, sem dependência de template do banco
+
+**Status:** Aceito (2026-10-10)
+
+**Contexto**
+
+A research R1 da feature `001-refine-happy-path` fazia o template de página do banco pré-criar o heading `## 🔍 Refinamento — <data>` e os 7 headings vazios; o orquestrador apenas preencheria os corpos com `update_content`. Dois fatos no board real invalidaram essa dependência:
+
+1. Muitas páginas já existem, criadas sem o template — nelas, o `old_str` do `update_content` não casaria e todo card falharia com erro permanente.
+2. O template criado na UI não ficou acessível à integração via API (`list_templates` vazio; a página do template devolvia 404 mesmo com o banco compartilhado), tornando o pré-requisito impossível de verificar confiavelmente.
+
+Decisão da usuária (2026-10-10): remover a dependência do template.
+
+**Decisão**
+
+O orquestrador cria o esqueleto quando a página não o tem:
+
+- `has_refinement_skeleton` (em `domain/rules.py`) detecta o heading `## 🔍 Refinamento` no markdown da página.
+- Ausente → um comando `insert_content` (`position: end`) insere a seção completa: `## 🔍 Refinamento — <data>` + os 7 headings + os corpos produzidos pelo agente.
+- Presente (página criada com template) → preenchimento por `update_content`, uma operação por seção, como antes (R1).
+
+O contrato do agente NÃO muda: ele continua devolvendo apenas corpos, sem headings (constituição I — a estrutura da página é decisão de código, nunca de prompt). A data do heading passa a ser renderizada pelo orquestrador (port `Clock`), no mesmo formato que o Notion renderizava no template (DD/MM/AAAA HH:MM).
+
+**Consequências**
+
+- Positivas: funciona para qualquer página existente, com ou sem template; um pré-requisito de setup a menos (criar e compartilhar template); data determinística e testável.
+- Negativas: usa o comando `insert_content`, classificado como legacy — caso único e justificado: `update_content` só substitui conteúdo existente, criar conteúdo novo exige insert. O preenchimento de páginas com template continua em `update_content` (comando recomendado). Ponto de verificação em runtime: o nome exato do campo do corpo no comando insert ("content") — confirmado na primeira validação real do MVP.

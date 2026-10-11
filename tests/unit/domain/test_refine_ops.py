@@ -1,9 +1,13 @@
 """Testes da construção de operações update_content (research R1) e do prompt."""
 
+from datetime import datetime
+
 from notion_copilot.domain.models import REFINE_SECTION_KEYS, RefineOutput
 from notion_copilot.domain.rules import (
     SECTION_HEADINGS,
+    build_refinement_insert,
     build_section_fill_ops,
+    has_refinement_skeleton,
     render_prompt,
 )
 from tests.unit.application.fakes import GOLDEN_AGENT_OUTPUT, make_card
@@ -30,6 +34,27 @@ def test_keeps_the_template_heading_unchanged_as_the_first_line_of_each_new_str(
 
     for op in ops:
         assert op.new_str.splitlines()[0] == op.old_str
+
+
+def test_detects_whether_the_page_has_the_refinement_skeleton():
+    with_skeleton = "texto da captura\n## 🔍 Refinamento — 10/10/2026\n### Contexto\n"
+    without_skeleton = "só a frase da captura, sem nada"
+
+    assert has_refinement_skeleton(with_skeleton) is True
+    assert has_refinement_skeleton(without_skeleton) is False
+
+
+def test_builds_the_full_refinement_block_with_heading_date_and_seven_sections():
+    output = RefineOutput.model_validate(GOLDEN_AGENT_OUTPUT)
+
+    block = build_refinement_insert(output, now=datetime(2026, 10, 10, 12, 0))
+
+    lines = block.splitlines()
+    assert lines[0] == "## 🔍 Refinamento — 10/10/2026 12:00"
+    headings = [line for line in lines if line.startswith("### ")]
+    assert headings == [SECTION_HEADINGS[key] for key in REFINE_SECTION_KEYS]
+    for key in REFINE_SECTION_KEYS:
+        assert output.sections[key] in block
 
 
 def test_render_prompt_delivers_title_properties_and_body_in_the_placeholders():

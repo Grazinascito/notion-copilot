@@ -126,3 +126,9 @@ Verificado na API reference: o endpoint aceita `rich_text` com Mention de user e
 - **ADR-006 (promoção a Aceito)**: a premissa factual ("a API aceita markdown, sem conversão para blocos") foi confirmada na documentação oficial (R1). O ADR-006 está em status **Proposto**; promovê-lo a Aceito é tarefa da feature (tasks.md), citando a R1 como evidência.
 - **ADR-007 (novo, obrigatório)**: intervalo 15 → 5 min. Deve substituir também a frase do ADR-001 que dizia que a rodada seguinte seleciona cards com IA status "vazio, ❓ ou ⚠️" — o FR-004 é mais estrito (somente vazio).
 - Nota histórica: a primeira versão desta research pedia uma "correção factual" do ADR-006 com base na premissa errônea de que a API não aceita markdown em páginas; a verificação na documentação oficial (R1) mostrou o contrário.
+
+---
+
+## Alteração posterior (2026-10-10): ADR-008 remove a dependência do template
+
+Durante a validação do MVP no board real, dois fatos invalidaram o pré-requisito do template: páginas já criadas sem ele falhariam com erro permanente, e o template criado na UI não ficou acessível à integração via API (`list_templates` vazio; página do template 404). O orquestrador passou a **criar** o esqueleto `## 🔍 Refinamento — <data>` + headings quando a página não o tem (um `insert_content` ao fim), e a **preencher** via `update_content` quando a página nasceu do template. O contrato do agente não mudou (só corpos, headings proibidos). Ver **ADR-008** em `docs/notion-copilot-adrs.md`.

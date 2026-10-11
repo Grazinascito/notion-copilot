@@ -14,6 +14,20 @@ from notion_copilot.domain.models import Card, IAStatus, Pipeline
 
 Journal = list[tuple[str, str, Any]]
 
+# Página criada a partir do template do banco (research R1): esqueleto vazio.
+SKELETON_MARKDOWN = "\n".join(
+    [
+        "## 🔍 Refinamento — 10/10/2026 11:00",
+        "### Contexto",
+        "### Links guardados",
+        "### Ações sugeridas",
+        "### O que já adiantei",
+        "### Perguntas abertas",
+        "### Prompt sugerido",
+        "### Executor sugerido",
+    ]
+)
+
 GOLDEN_AGENT_OUTPUT = {
     "title": "Ligar para a Estácio sobre bolsa do curso",
     "sections": {
@@ -119,6 +133,7 @@ class FakeWriter:
         self._journal = journal if journal is not None else []
         self.ia_status_calls: list[tuple[str, IAStatus | None, datetime]] = []
         self.updates: list[tuple[str, list]] = []
+        self.appends: list[tuple[str, str]] = []
         self.titles: list[tuple[str, str]] = []
         self.executors: list[tuple[str, str]] = []
         self.moved: list[str] = []
@@ -133,6 +148,10 @@ class FakeWriter:
     def apply_markdown_updates(self, page_id: str, updates: list) -> None:
         self.updates.append((page_id, list(updates)))
         self._journal.append(("writer", "apply_markdown_updates", len(updates)))
+
+    def append_markdown(self, page_id: str, markdown: str) -> None:
+        self.appends.append((page_id, markdown))
+        self._journal.append(("writer", "append_markdown", markdown[:40]))
 
     def set_title(self, page_id: str, title: str) -> None:
         self.titles.append((page_id, title))
