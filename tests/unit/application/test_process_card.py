@@ -30,7 +30,14 @@ def invoke(tmp_path, *, agent_raw=None, card=None, markdown=SKELETON_MARKDOWN):
         "events": EventLog(state_dir=tmp_path),
         "prompt_template": TEMPLATE,
     }
-    result = process_card(card, run_id="r1", **deps)
+    result = process_card(
+        card,
+        run_id="r1",
+        notion_user_id="user-1",
+        retry_backoff_s=[0, 0],
+        sleep=lambda seconds: None,
+        **deps,
+    )
     return result, deps, journal
 
 

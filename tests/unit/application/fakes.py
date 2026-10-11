@@ -105,14 +105,23 @@ class FakeReader:
         cards: list[Card],
         markdown: str = "corpo original do card",
         journal: Journal | None = None,
+        stale_cards: list[Card] | None = None,
+        get_card_overrides: dict[str, Card] | None = None,
+        flaky_markdown_reads: int = 0,
     ) -> None:
         self._cards = cards
         self._markdown = markdown
         self._journal = journal if journal is not None else []
+        self._stale_cards = stale_cards or []
+        self._overrides = get_card_overrides or {}
+        self._flaky_reads = flaky_markdown_reads
         self.query_calls = 0
+        self.stale_query_calls = 0
 
     def get_card(self, page_id: str) -> Card:
         self._journal.append(("reader", "get_card", page_id))
+        if page_id in self._overrides:
+            return self._overrides[page_id]
         return next(c for c in self._cards if c.page_id == page_id)
 
     def query_eligible(self, limit: int) -> list[Card]:
@@ -121,10 +130,17 @@ class FakeReader:
         return list(self._cards)
 
     def query_stale_running(self, older_than_s: float) -> list[Card]:
-        return []
+        self.stale_query_calls += 1
+        self._journal.append(("reader", "query_stale_running", older_than_s))
+        return list(self._stale_cards)
 
     def get_page_markdown(self, page_id: str) -> str:
         self._journal.append(("reader", "get_page_markdown", page_id))
+        if self._flaky_reads > 0:
+            self._flaky_reads -= 1
+            from notion_copilot.domain.rules import TemporaryFailure
+
+            raise TemporaryFailure("429 Too Many Requests")
         return self._markdown
 
 
@@ -171,7 +187,8 @@ class FakeWriter:
 
 
 class FakeAgent:
-    def __init__(self, raw: str, journal: Journal | None = None) -> None:
+    def __init__(self, raw, journal: Journal | None = None) -> None:
+        # raw: string fixa, ou callable(card_id) -> string (respostas por card)
         self.raw = raw
         self._journal = journal if journal is not None else []
         self.prompts: list[str] = []
@@ -179,4 +196,6 @@ class FakeAgent:
     def run_refine(self, prompt: str, run_id: str, card_id: str) -> str:
         self.prompts.append(prompt)
         self._journal.append(("agent", "run_refine", card_id))
+        if callable(self.raw):
+            return self.raw(card_id)
         return self.raw

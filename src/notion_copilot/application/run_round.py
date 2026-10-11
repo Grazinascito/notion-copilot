@@ -4,6 +4,7 @@ eventos. Processo de vida curta; a fila é a coluna To Refine (ADR-003).
 
 from __future__ import annotations
 
+import time
 from collections.abc import Callable
 
 from notion_copilot.application.ports import (
@@ -16,8 +17,13 @@ from notion_copilot.application.ports import (
 )
 from notion_copilot.application.process_card import process_card
 from notion_copilot.config import Settings
-from notion_copilot.domain.models import Card, new_run_id
-from notion_copilot.domain.rules import is_eligible, select_cards
+from notion_copilot.domain.models import Card, CardResult, IAStatus, new_run_id
+from notion_copilot.domain.rules import (
+    is_eligible,
+    is_stale,
+    select_cards,
+    with_retry,
+)
 
 # Eventos de rodada usam stage "round": os estágios do data-model
 # (preflight|select|refine|write|move|comment) descrevem etapas de card.
@@ -60,6 +66,11 @@ def run_round(
             return 1
         events.emit(run_id=run_id, stage=ROUND_STAGE, event="round_started")
 
+        if single_card is None:
+            # FR-017/R7: varre ⏳ abandonados antes da seleção (modo --card
+            # não varre — contracts/cli-commands.md)
+            _sweep_stale(reader, writer, settings, run_id, events, clock)
+
         selected = _select(reader, settings, run_id, events, single_card, sink)
         if selected is None:
             return 1
@@ -75,6 +86,7 @@ def run_round(
             )
             return 0
 
+        results: list[CardResult] = []
         for card in selected:
             result = process_card(
                 card,
@@ -85,12 +97,67 @@ def run_round(
                 clock=clock,
                 events=events,
                 prompt_template=prompt_template,
+                notion_user_id=settings.notion_user_id,
+                retry_backoff_s=settings.retry_backoff_s,
             )
+            results.append(result)
             sink(f"· {card.page_id}: {result.outcome}")
         events.emit(run_id=run_id, stage=ROUND_STAGE, event="round_finished")
+        # contracts/cli-commands.md: 3 = rodada com cards em erro
+        if any(result.outcome == "error" for result in results):
+            return 3
         return 0
     finally:
         lock.release()
+
+
+def _sweep_stale(
+    reader: NotionReader,
+    writer: NotionWriter,
+    settings: Settings,
+    run_id: str,
+    events: EventSink,
+    clock: Clock,
+) -> None:
+    """FR-017: ⏳ abandonado (processo interrompido) vira ⚠️ com comentário."""
+    candidates = reader.query_stale_running(settings.stale_after_s)
+    for card in candidates:
+        if is_stale(card, now=clock.now(), stale_after_s=settings.stale_after_s):
+            _mark_stale_card(card, writer, settings, run_id, events, clock)
+
+
+def _mark_stale_card(
+    card: Card,
+    writer: NotionWriter,
+    settings: Settings,
+    run_id: str,
+    events: EventSink,
+    clock: Clock,
+) -> None:
+    with_retry(
+        lambda: writer.set_ia_status(card.page_id, IAStatus.ERRO, now=clock.now()),
+        backoff_s=settings.retry_backoff_s,
+        sleep=time.sleep,
+    )
+    events.emit(
+        run_id=run_id,
+        card_id=card.page_id,
+        stage="refine",
+        event="card_marked_stale",
+    )
+    try:
+        with_retry(
+            lambda: writer.add_comment(
+                card.page_id,
+                "⚠️ Erro: o card ficou em ⏳ por mais de 30 minutos "
+                "(processo interrompido). Execução " + run_id + ".",
+                settings.notion_user_id,
+            ),
+            backoff_s=settings.retry_backoff_s,
+            sleep=time.sleep,
+        )
+    except Exception:
+        pass  # notificação falha silenciosa; o ⚠️ já está no board
 
 
 def _select(

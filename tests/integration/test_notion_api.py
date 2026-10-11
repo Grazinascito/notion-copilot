@@ -121,7 +121,8 @@ class FakeNotionClient:
             self.calls, "pages.update_markdown", {"object": "page"}
         )
         comments = _NS()
-        comments.create = FakeEndpoint(self.calls, "comments.create", {"object": "comment"})
+        comments.create = FakeEndpoint(self.calls, "comments.create", {"object": "comment", "id": "comment-1"})
+        comments.delete = FakeEndpoint(self.calls, "comments.delete", {"object": "comment"})
         self.users = users
         self.data_sources = data_sources
         self.pages = pages

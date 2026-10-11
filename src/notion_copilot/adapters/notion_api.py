@@ -1,9 +1,9 @@
 """Adapter do Notion — único arquivo que conhece a API do Notion (constituição IV).
 
 Encapsula o SDK notion-client, incluindo os endpoints markdown da versão
-2026-03-11 (research R1/R2): pages.retrieve_markdown / pages.update_markdown
-com o comando update_content. Todos os erros da API propagam como exceções do
-SDK; a classificação temporário/permanente é do domínio (rules).
+2026-03-11 (research R1/R2): pages.retrieve_markdown / pages.update_markdown.
+Erros externos são traduzidos aqui para tipos do domínio: 429/5xx/rede viram
+TemporaryFailure (retryável); o resto permanece permanente (research R8).
 """
 
 from __future__ import annotations
@@ -12,6 +12,7 @@ from datetime import UTC, datetime, timedelta
 from enum import StrEnum
 from typing import Any, TypeVar
 
+import httpx
 import notion_client
 
 from notion_copilot.domain.models import (
@@ -21,6 +22,59 @@ from notion_copilot.domain.models import (
     MarkdownUpdate,
     Pipeline,
 )
+from notion_copilot.domain.rules import TemporaryFailure
+
+T = TypeVar("T")
+
+_TEMPORARY_API_CODES = {
+    "rate_limited",  # 429
+    "internal_server_error",  # 500
+    "service_unavailable",  # 503
+    "gateway_timeout",  # 504
+}
+
+
+def _is_temporary(exc: Exception) -> bool:
+    code = getattr(exc, "code", None)
+    if isinstance(code, StrEnum):
+        code = code.value
+    if code is not None:
+        return str(code) in _TEMPORARY_API_CODES
+    return isinstance(exc, httpx.TransportError)
+
+
+class _TranslatingClient:
+    """Proxy que traduz erros do SDK para o domínio em um único lugar.
+
+    Envelopa a cadeia inteira de atributos (client.pages.update_markdown):
+    callables ganham o try/except de tradução; objetos-namespace são
+    envelopados recursivamente; dados simples (listas, dicts, escalares)
+    passam direto. Sem este proxy, cada método do adapter precisaria do mesmo
+    try/except (repetition, red flag 6) — e o notion_client vaza para o
+    application.
+    """
+
+    def __init__(self, inner: Any) -> None:
+        self._inner = inner
+
+    def __getattr__(self, name: str) -> Any:
+        attr = getattr(self._inner, name)
+        if callable(attr):
+
+            def translated(*args: Any, **kwargs: Any) -> Any:
+                try:
+                    return attr(*args, **kwargs)
+                except TemporaryFailure:
+                    raise
+                except Exception as exc:
+                    if _is_temporary(exc):
+                        raise TemporaryFailure(f"{type(exc).__name__}: {exc}") from exc
+                    raise
+
+            return translated
+        if isinstance(attr, (list, dict, str, int, float, bool, type(None))):
+            return attr
+        return _TranslatingClient(attr)
 
 EXPECTED_PROPERTIES: dict[str, str] = {
     "Name": "title",
@@ -47,7 +101,8 @@ class NotionApi:
     ) -> None:
         # O SDK expõe endpoints dinâmicos (stubs incompletos); o cliente é Any
         # de propósito — este arquivo é o único que conhece a API (constituição IV).
-        self._client: Any = (
+        # O proxy traduz 429/5xx/rede para TemporaryFailure (research R8).
+        self._client: Any = _TranslatingClient(
             client if client is not None else notion_client.Client(auth=auth_token)
         )
         self._database_id = database_id
@@ -171,6 +226,39 @@ class NotionApi:
                 {"type": "text", "text": {"content": f" {text}"}},
             ],
         )
+
+    def comment_capability_problems(self) -> list[str]:
+        """R6: sonda a capability Insert comments (comentário de prova, sem
+        menção para não notificar, apagado na sequência)."""
+        try:
+            response = self._client.comments.create(
+                parent={"page_id": self._probe_parent_page_id()},
+                rich_text=[
+                    {"type": "text", "text": {"content": "verificação de capability"}},
+                ],
+            )
+        except Exception as exc:
+            return [
+                f"Comentário de prova falhou ({type(exc).__name__}): habilite a "
+                "capability 'Insert comments' da integração em "
+                "notion.so/my-integrations — sem ela, falhas e bloqueios não "
+                "notificam (FR-014)."
+            ]
+        try:
+            self._client.comments.delete(comment_id=response["id"])
+        except Exception:
+            pass  # pior caso: um comentário de prova fica na página
+        return []
+
+    def _probe_parent_page_id(self) -> str:
+        """Página para o comentário de prova: o card mais antigo do banco."""
+        response = self._client.data_sources.query(
+            data_source_id=self._database_id, page_size=1
+        )
+        results = response.get("results", [])
+        if not results:
+            raise RuntimeError("banco sem páginas para sondar comentários")
+        return str(results[0]["id"])
 
     # ----- pré-flight (FR-002) -------------------------------------------
 

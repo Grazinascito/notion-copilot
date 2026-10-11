@@ -5,15 +5,61 @@
 from __future__ import annotations
 
 import re
+from collections.abc import Callable
 from datetime import datetime
 
 from notion_copilot.domain.models import (
     REFINE_SECTION_KEYS,
     Card,
+    IAStatus,
     MarkdownUpdate,
     Pipeline,
     RefineOutput,
 )
+
+
+class TemporaryFailure(Exception):
+    """Falha de infraestrutura que pode passar sozinha (rede, 429/5xx do
+    Notion). Traduzida pelo adapter; merece retry (FR-016, research R8).
+
+    Tudo o que não é TemporaryFailure é tratado como permanente: timeout do
+    agente (decisão 2026-10-10), JSON inválido, 4xx.
+    """
+
+
+def is_retryable(exc: Exception) -> bool:
+    """R8: somente falhas de infraestrutura repetem."""
+    return isinstance(exc, TemporaryFailure)
+
+
+def is_stale(card: Card, *, now: datetime, stale_after_s: float) -> bool:
+    """FR-017: card ⏳ cuja última transição de IA status passa do corte."""
+    if card.ia_status is not IAStatus.RODANDO:
+        return False
+    if card.ia_updated_at is None:
+        return False
+    return (now - card.ia_updated_at).total_seconds() > stale_after_s
+
+
+def with_retry[T](
+    operation: Callable[[], T],
+    *,
+    backoff_s: list[int],
+    sleep: Callable[[float], None],
+) -> tuple[T, int]:
+    """FR-016: executa a operação; TemporaryFailure espera e repete.
+
+    Devolve (resultado, tentativas usadas) — no máximo 1 + len(backoff_s).
+    A última tentativa propaga o erro para o chamador.
+    """
+    attempts = 1
+    for delay in backoff_s:
+        try:
+            return operation(), attempts
+        except TemporaryFailure:
+            sleep(delay)
+            attempts += 1
+    return operation(), attempts
 
 # Headings do template (research R1): páginas criadas a partir do template do
 # banco nascem com eles. Quando a página não tem o esqueleto, o orquestrador

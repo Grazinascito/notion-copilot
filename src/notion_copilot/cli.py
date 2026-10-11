@@ -30,11 +30,7 @@ REQUIRED_ENV: list[tuple[str, str]] = [
     ("anthropic_auth_token", "ANTHROPIC_AUTH_TOKEN"),
 ]
 
-MANUAL_REMINDERS = [
-    "Capabilities da integração: habilite Read content, Update content e "
-    "Insert comments em notion.so/my-integrations (research R1/R6) — sem elas, "
-    "a API retorna 403.",
-]
+MANUAL_REMINDERS: list[str] = []
 
 
 class SystemClock:
@@ -143,6 +139,7 @@ def verify() -> None:
         ("arquivo .env e campos obrigatórios", _env_problems(settings)),
         ("arquivos prompts/refine.md e .mcp.json", _file_problems(settings)),
         ("token do Notion e banco do inbox", notion.check_problems()),
+        ("capability Insert comments (sonda)", notion.comment_capability_problems()),
         ("executável do agente (claude)", claude_check()),
     ]
     for label, problems in checks:
