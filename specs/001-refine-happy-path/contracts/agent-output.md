@@ -28,7 +28,7 @@ O agente (Claude Code CLI) recebe o prompt versionado (`prompts/refine.md`) já 
 | `title` | String não vazia, ≤ 80 chars. Pode igualar o original ("título já bom") | FR-010 |
 | `sections` | As 7 chaves são obrigatórias (`contexto`, `links_guardados`, `acoes_sugeridas`, `o_que_ja_adiantei`, `perguntas_abertas`, `prompt_sugerido`, `executor_sugerido`). Cada valor é o corpo da seção correspondente do template da página (headings `### Contexto` … `### Executor sugerido` já existem) | FR-010 |
 | Fatos vs. hipóteses | Todo fato verificado cita fonte com link; fato sem fonte marcado como **Hipótese** | FR-010, ADR-005 |
-| `blocking_questions` | Lista (possivelmente vazia) de perguntas que só a usuária responde. Não vazio → card termina ❓ | FR-012 |
+| `blocking_questions` | Lista (possivelmente vazia) de perguntas que só a usuária responde. Cada item é autossuficiente — uma frase de contexto (o fato que motivou a pergunta), a pergunta fechada com opções e o efeito da resposta ("bloqueia o próximo passo — o que muda com a resposta") — porque o orquestrador copia o item verbatim para o comentário que notifica a usuária (FR-014 emendado). Não vazio → card termina ❓ | FR-012 |
 | `executor_suggestion` | `"HUMANO"` ou `"IA"` — alimenta a propriedade Executor (só se vier vazia); o texto exibido na seção vem em `sections.executor_sugerido` | FR-010 |
 | Markdown permitido nos corpos | Parágrafo, bulleted/numbered list, to-do `- [ ]`, quote, **bold**, *itálico*, `código`, [links] — suportados nativamente pelo endpoint markdown da API do Notion (research R1). **Headings são proibidos nos corpos**: os headings vêm do template, e um heading dentro do corpo criaria casamento ambíguo no `old_str` do `update_content` | — |
 

@@ -97,8 +97,8 @@ Todo fato verificado cita a fonte com link. Fato sem fonte é **Hipótese**.
    encontrei X" e siga.
 6. Liste as próximas ações, em ordem.
 7. Escreva no máximo 3 perguntas. Prefira perguntas fechadas: sim/não, ou
-   escolher entre opções listadas. Só é bloqueante a pergunta sem a qual o
-   próximo passo daria resultado errado.
+   escolher entre opções listadas. Uma condição por pergunta. Só é
+   bloqueante a pergunta sem a qual o próximo passo daria resultado errado.
 8. Sugira o executor e, quando houver um subpasso que a IA executa, escreva o
    prompt sugerido.
 
@@ -152,9 +152,21 @@ depende de ação humana.").
   ligação): uma linha em negrito dizendo para quem é e pelo canal, e o
   rascunho como citação (`> `). No máximo 2 rascunhos.
 - **perguntas_abertas** — Perguntas numeradas, no máximo 3, fechadas, com
-  opções. Marque cada uma com "(bloqueia o próximo passo)" ou "(não
-  bloqueia)". Toda pergunta bloqueante aparece aqui marcada e também na lista
-  `blocking_questions`; a não-bloqueante fica só aqui.
+  opções. Uma condição por pergunta. Cada pergunta é autossuficiente: quem
+  lê só o texto dela — por exemplo, no comentário que notifica a leitora —
+  entende o motivo, a pergunta e o que muda com a resposta. Formato de cada
+  pergunta: uma frase de contexto com o fato que a motivou (cite a fonte,
+  aponte "Fonte em 'O que já adiantei'" ou rotule como Hipótese) + a
+  pergunta fechada com opções + "(bloqueia o próximo passo — o que muda com
+  a resposta)" ou "(não bloqueia)". Exemplo ruim: "Sua pele está bronzeada
+  ou você usa ácido ou retinoide no rosto?" — sem motivo, sem opções, duas
+  condições numa pergunta só. Exemplo bom: "Clínicas de laser contraindicam
+  sessão com pele bronzeada e com uso de ácido ou retinoide no rosto (Fonte
+  em 'O que já adiantei'). Você está em uma dessas situações hoje? Opções:
+  sim / não. (bloqueia o próximo passo — se sim, o laser precisa esperar e a
+  comparação vale só cera e casa)". A pergunta bloqueante marcada aqui vai
+  também, no mesmo formato, para a lista `blocking_questions`; a
+  não-bloqueante fica só aqui.
 - **prompt_sugerido** — Quase sempre existe um subpasso que a IA executa com
   busca e leitura, mesmo quando a ação final é humana: compilar um guia,
   comparar opções e custos, montar roteiro ou rascunho, verificar requisitos.
@@ -186,7 +198,11 @@ completo e longo.
   leitora responde **e** que bloqueiam o próximo passo — sem a resposta, o
   passo seguinte daria resultado errado ou desperdiçaria o tempo dela. Não
   inclua pergunta que apenas confirma uma Hipótese barata de corrigir depois.
-  Quem decide o estado do card é o orquestrador, a partir desta lista.
+  Cada item é a pergunta completa e autossuficiente, no mesmo formato da
+  seção "Perguntas abertas" (contexto + pergunta fechada com opções +
+  efeito da resposta): o orquestrador copia o item assim, sem alteração,
+  para o comentário que notifica a leitora (FR-014). Quem decide o estado
+  do card é o orquestrador, a partir desta lista.
 
 ## Markdown permitido nos corpos
 

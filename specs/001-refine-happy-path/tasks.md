@@ -156,6 +156,8 @@ Single project: código em `src/notion_copilot/`, prompts em `prompts/`, testes 
 - [x] T052 Update `tests/unit/application/test_failure_visibility.py` (pergunta no corpo do comentário; sem "Execução") e `tests/integration/test_notion_comments.py` (payload com o novo texto)
 - [x] T053 [P] Add to `prompts/refine.md` (Estilo de escrita): "Respeite o limite de tamanho da etapa..." e "Sem introdução" — alinha o prompt ao bloco de estilo da usuária
 - [x] T054 Run quality gates and fix findings: `uv run pytest`, `uv run ruff check .`, `uv run mypy src` — tudo verde; commit da emenda
+- [x] T055 Self-contained blocking questions (feedback da primeira execução com o novo comentário): `contracts/agent-output.md` + `prompts/refine.md` definem o formato de cada item de `blocking_questions` — contexto (fato com fonte), pergunta fechada com opções, uma condição por pergunta, efeito da resposta — porque o item vai verbatim para o comentário de notificação (FR-014)
+- [x] T056 Re-run quality gates after T055 and commit
 
 ---
 
