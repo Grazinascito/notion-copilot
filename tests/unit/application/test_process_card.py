@@ -50,7 +50,7 @@ def test_delivers_title_properties_and_body_inside_the_prompt(tmp_path):
     assert result.outcome == "success"
     prompt = deps["agent"].prompts[0]
     assert "ligar pra estacio pra saber como pegar bolsa do curso" in prompt
-    assert "Pipeline: To Refine" in prompt
+    assert "Pipeline: TO REFINE" in prompt
     assert "corpo com detalhes" in prompt
     assert "{{" not in prompt
 

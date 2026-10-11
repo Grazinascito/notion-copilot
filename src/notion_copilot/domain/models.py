@@ -16,12 +16,19 @@ from pydantic import BaseModel, Field, field_validator
 
 
 class Pipeline(StrEnum):
-    """Raias do board. Somente TO_REFINE é elegível (FR-004)."""
+    """Raias do board, com os nomes exatos das opções no board real.
+    Somente TO_REFINE é elegível (FR-004).
+    """
 
-    TO_REFINE = "To Refine"
-    PLAN = "Plan"
-    AI_EXECUTE = "AI Execute"
-    REFINED = "Refined"
+    BACKLOG = "BACKLOG"
+    TO_REFINE = "TO REFINE"
+    PLAN = "PLAN"
+    HUMAN_EXECUTE = "HUMAN EXECUTE"
+    AI_EXECUTE = "AI EXECUTE"
+    REVIEW = "REVIEW"
+    REFINED = "REFINED"
+    DONE = "DONE"
+    ARCHIVED = "ARCHIVED"
 
 
 class IAStatus(StrEnum):

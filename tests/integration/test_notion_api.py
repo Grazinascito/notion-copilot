@@ -21,7 +21,7 @@ RECORDED_PAGE = {
             "type": "title",
             "title": [{"plain_text": "ligar pra estacio pra saber da bolsa"}],
         },
-        "Pipeline": {"type": "select", "select": {"name": "To Refine"}},
+        "Pipeline": {"type": "select", "select": {"name": "TO REFINE"}},
         "Executor": {"type": "select", "select": None},
         "IA status": {"type": "select", "select": None},
         "IA atualizado em": {"type": "date", "date": None},
@@ -35,7 +35,7 @@ RECORDED_DATABASE = {
         "Name": {"type": "title"},
         "Pipeline": {
             "type": "select",
-            "select": {"options": [{"name": "To Refine"}, {"name": "Refined"}]},
+            "select": {"options": [{"name": "TO REFINE"}, {"name": "REFINED"}]},
         },
         "Executor": {
             "type": "select",
@@ -144,12 +144,12 @@ def test_queries_eligible_cards_with_the_server_side_filter_and_translates_them(
     (name, kwargs), *_ = [c for c in api._client.calls if c[0] == "data_sources.query"]
     assert kwargs["filter"] == {
         "and": [
-            {"property": "Pipeline", "select": {"equals": "To Refine"}},
+            {"property": "Pipeline", "select": {"equals": "TO REFINE"}},
             {"property": "IA status", "select": {"is_empty": True}},
         ]
     }
-    assert kwargs["sorts"] == [{"property": "created_time", "direction": "ascending"}]
-    assert kwargs["page_size"] == 5
+    assert kwargs["page_size"] == 100
+    assert "sorts" not in kwargs
 
     assert len(cards) == 1
     card = cards[0]
@@ -216,7 +216,7 @@ def test_moves_the_card_to_the_refined_pipeline():
     api.move_to_refined(PAGE_ID)
 
     (name, kwargs), *_ = [c for c in api._client.calls if c[0] == "pages.update"]
-    assert kwargs["properties"]["Pipeline"] == {"select": {"name": "Refined"}}
+    assert kwargs["properties"]["Pipeline"] == {"select": {"name": "REFINED"}}
 
 
 def test_check_problems_reports_missing_properties_with_a_fix_hint():

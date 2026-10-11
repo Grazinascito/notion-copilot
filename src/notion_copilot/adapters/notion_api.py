@@ -59,7 +59,13 @@ class NotionApi:
         return self._card_from_page(page)
 
     def query_eligible(self, limit: int) -> list[Card]:
-        """FR-004/R7: filtro server-side — fila vazia custa 1 consulta."""
+        """FR-004/R7: filtro server-side — fila vazia custa 1 consulta.
+
+        Sem sort server-side: a API nova não aceita o timestamp embutido
+        `created_time` e o nome da propriedade de criação varia por board.
+        Busca até 100 candidatas e a ordenação (mais antigos primeiro, limite
+        `limit`) fica com a regra do domínio (select_cards), que é testada.
+        """
         response = self._client.data_sources.query(
             data_source_id=self._database_id,
             filter={
@@ -68,8 +74,7 @@ class NotionApi:
                     {"property": "IA status", "select": {"is_empty": True}},
                 ]
             },
-            sorts=[{"property": "created_time", "direction": "ascending"}],
-            page_size=limit,
+            page_size=100,
         )
         return [self._card_from_page(page) for page in response.get("results", [])]
 

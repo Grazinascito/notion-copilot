@@ -68,7 +68,7 @@ def test_render_prompt_delivers_title_properties_and_body_in_the_placeholders():
     prompt = render_prompt(template, card)
 
     assert "titulo da captura" in prompt
-    assert "Pipeline: To Refine" in prompt
+    assert "Pipeline: TO REFINE" in prompt
     assert "Executor: (vazio)" in prompt
     assert "corpo com detalhes" in prompt
     assert "{{" not in prompt
