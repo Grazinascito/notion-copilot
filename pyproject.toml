@@ -9,6 +9,9 @@ dependencies = [
     "pydantic>=2.7",
     "pydantic-settings>=2.3",
     "notion-client>=2.2",
+    # httpx é transitivo do notion-client, mas o adapter o importa direto
+    # (tradução de erros de transporte) — dependência declarada é dependência
+    "httpx>=0.27",
     "platformdirs>=4.2",
 ]
 
