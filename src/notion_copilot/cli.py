@@ -67,6 +67,17 @@ def _file_problems(settings: Settings) -> list[str]:
         )
     if not settings.mcp_config_path.is_file():
         problems.append(f".mcp.json ausente em {settings.mcp_config_path}")
+    else:
+        import json
+
+        try:
+            json.loads(settings.mcp_config_path.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, UnicodeDecodeError) as exc:
+            problems.append(
+                f".mcp.json não é JSON válido ({exc}). O claude CLI recusa o "
+                "arquivo com comentários — use JSON puro; a credencial entra via "
+                "${ANTHROPIC_AUTH_TOKEN}, expandida pelo CLI."
+            )
     return problems
 
 

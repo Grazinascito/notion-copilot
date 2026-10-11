@@ -185,14 +185,13 @@ def test_applies_update_content_operations_through_the_markdown_endpoint():
     (name, kwargs), *_ = [c for c in api._client.calls if c[0] == "pages.update_markdown"]
     assert kwargs == {
         "page_id": PAGE_ID,
-        "commands": [
-            {"type": "update_content", "old_str": "### Contexto", "new_str": "### Contexto\nCorpo."},
-            {
-                "type": "update_content",
-                "old_str": "### Links guardados",
-                "new_str": "### Links guardados\n- x",
-            },
-        ],
+        "type": "update_content",
+        "update_content": {
+            "content_updates": [
+                {"old_str": "### Contexto", "new_str": "### Contexto\nCorpo."},
+                {"old_str": "### Links guardados", "new_str": "### Links guardados\n- x"},
+            ]
+        },
     }
 
 
@@ -241,13 +240,11 @@ def test_appends_the_refinement_skeleton_via_insert_content():
     ]
     assert kwargs == {
         "page_id": PAGE_ID,
-        "commands": [
-            {
-                "type": "insert_content",
-                "position": "end",
-                "content": "## 🔍 Refinamento — 10/10/2026 12:00\n### Contexto\nx",
-            }
-        ],
+        "type": "insert_content",
+        "insert_content": {
+            "content": "## 🔍 Refinamento — 10/10/2026 12:00\n### Contexto\nx",
+            "position": {"type": "end"},
+        },
     }
 
 

@@ -119,35 +119,29 @@ class NotionApi:
         )
 
     def apply_markdown_updates(self, page_id: str, updates: list[MarkdownUpdate]) -> None:
-        """R1: update_content com old_str único por operação (≤100 ops/request)."""
+        """R1: update_content — até 100 content_updates, old_str exato (schema
+        verificado na API 2026-03-11: type no topo, comando aninhado)."""
         self._client.pages.update_markdown(
             page_id=page_id,
-            commands=[
-                {
-                    "type": "update_content",
-                    "old_str": update.old_str,
-                    "new_str": update.new_str,
-                }
-                for update in updates
-            ],
+            type="update_content",
+            update_content={
+                "content_updates": [
+                    {"old_str": update.old_str, "new_str": update.new_str}
+                    for update in updates
+                ]
+            },
         )
 
     def append_markdown(self, page_id: str, markdown: str) -> None:
         """ADR-008: insere o esqueleto 🔍 completo ao fim da página.
 
-        insert_content é classificado como legacy, mas é o comando certo para
-        criar conteúdo novo — update_content só substitui o que já existe.
-        Campo do corpo ("content") é ponto de verificação em runtime.
+        insert_content é legacy, mas é o comando que cria conteúdo novo —
+        update_content só substitui o que existe.
         """
         self._client.pages.update_markdown(
             page_id=page_id,
-            commands=[
-                {
-                    "type": "insert_content",
-                    "position": "end",
-                    "content": markdown,
-                }
-            ],
+            type="insert_content",
+            insert_content={"content": markdown, "position": {"type": "end"}},
         )
 
     def set_title(self, page_id: str, title: str) -> None:
